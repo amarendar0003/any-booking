@@ -1,0 +1,26 @@
+{% extends "emails/_base.html" %}
+{% block content %}
+<h2>Cancellation Request Received</h2>
+<p class="greeting">Hi {{ booking.customer_name }},</p>
+<p>We've received your request to cancel the following booking. Our team will review it and get back to you shortly with the next steps and any applicable refund details.</p>
+
+<div class="card">
+  <div class="card-row"><span class="label">Confirmation #</span><span class="value" style="font-family:monospace;font-weight:700;letter-spacing:.06em;font-size:16px;color:#1a56db">{{ booking.confirmation_number }}</span></div>
+  <div class="card-row"><span class="label">Service</span><span class="value">{{ booking.service.name }}</span></div>
+  {% if booking.service.city %}<div class="card-row"><span class="label">Location</span><span class="value">{{ booking.service.city.full_location }}</span></div>{% endif %}
+  <div class="card-row"><span class="label">Event Date</span><span class="value"><strong>{{ booking.event_date|date:"D, d M Y" }}</strong></span></div>
+  <div class="card-row"><span class="label">Total Amount</span><span class="value">₹{{ booking.total_amount|floatformat:2 }}</span></div>
+  <div class="card-row"><span class="label">Advance Paid</span><span class="value">₹{{ booking.advance_amount|floatformat:2 }}</span></div>
+  <div class="card-row"><span class="label">Status</span><span class="value"><span class="badge badge-{{ booking.status }}">{{ booking.get_status_display }}</span></span></div>
+</div>
+
+{% if booking.cancellation_request_reason %}
+<p><strong>Your reason:</strong><br>{{ booking.cancellation_request_reason }}</p>
+{% endif %}
+
+<p>We will notify you by email once your cancellation has been processed. If you change your mind, please contact us as soon as possible.</p>
+
+<a class="btn" href="{{ site_url }}{% url 'booking_lookup' %}">Find My Booking</a>
+
+<p style="font-size:13px;color:#64748b">Reference: <strong style="font-family:monospace">{{ booking.confirmation_number }}</strong></p>
+{% endblock %}

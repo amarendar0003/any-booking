@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% block title %}Book — {{ service.name }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb-hero">
+  <div class="container">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-0 small">
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'service_detail' service.slug %}">{{ service.name }}</a></li>
+        <li class="breadcrumb-item active">Book</li>
+      </ol>
+    </nav>
+  </div>
+</div>
+
+<div class="container my-4" style="max-width:860px">
+  <h3 class="fw-bold mb-1">Book: {{ service.name }}</h3>
+  <p class="text-muted mb-4">
+    <i class="bi bi-geo-alt"></i>
+    {% if service.city %}{{ service.city.name }}, {{ service.city.state.name }}{% endif %}
+    &nbsp;·&nbsp;
+    {% if service.base_price %}
+      <strong>{{ service.currency_symbol }}{{ service.base_price|floatformat:0 }}</strong> / {{ service.price_unit }}
+    {% else %}
+      Price on request
+    {% endif %}
+  </p>
+
+  <div class="row g-4">
+    <div class="col-md-7">
+      <div class="card border-0 shadow-sm rounded-3 p-4">
+        <h5 class="fw-bold mb-3">Your Details</h5>
+        <form method="post">
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Full Name *</label>
+            {{ form.customer_name }}
+            {% if form.customer_name.errors %}<div class="text-danger small mt-1">{{ form.customer_name.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Email *</label>
+              {{ form.customer_email }}
+              {% if form.customer_email.errors %}<div class="text-danger small mt-1">{{ form.customer_email.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Phone *</label>
+              {{ form.customer_phone }}
+              {% if form.customer_phone.errors %}<div class="text-danger small mt-1">{{ form.customer_phone.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+
+          <hr class="my-3">
+          <h5 class="fw-bold mb-3">Event Details</h5>
+
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Event Date *</label>
+              {{ form.event_date }}
+              {% if form.event_date.errors %}<div class="text-danger small mt-1">{{ form.event_date.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">End Date</label>
+              {{ form.event_end_date }}
+              {% if form.event_end_date.errors %}<div class="text-danger small mt-1">{{ form.event_end_date.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Preferred Time</label>
+              {{ form.event_time }}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Number of Guests *</label>
+              {{ form.guest_count }}
+              {% if form.guest_count.errors %}<div class="text-danger small mt-1">{{ form.guest_count.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Special Requests</label>
+            {{ form.special_requests }}
+          </div>
+
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+          {% endif %}
+
+          {% if active_terms %}
+          <div class="mb-4">
+            <hr class="my-3">
+            <h5 class="fw-bold mb-2"><i class="bi bi-file-text"></i> Terms of Use</h5>
+            {% for terms in active_terms %}
+            <div class="mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="fw-semibold small">{{ terms.title }}</span>
+                <span class="text-muted small">v{{ terms.version }}
+                  {% if terms.scope == 'service' %}<span class="badge bg-warning text-dark ms-1">Service</span>{% endif %}
+                </span>
+              </div>
+              <div class="border rounded-3 p-3 small"
+                   style="max-height:160px;overflow-y:auto;background:#f9fafb;font-size:0.82rem;line-height:1.5">
+                {{ terms.content|safe }}
+              </div>
+            </div>
+            {% endfor %}
+
+            <div class="form-check mt-2{% if terms_error %} is-invalid{% endif %}">
+              <input class="form-check-input{% if terms_error %} is-invalid{% endif %}"
+                     type="checkbox" name="terms_accepted" id="terms_accepted"
+                     {% if request.POST.terms_accepted %}checked{% endif %} required>
+              <label class="form-check-label fw-semibold" for="terms_accepted">
+                I have read and agree to the Terms of Use above
+              </label>
+            </div>
+            {% if terms_error %}
+            <div class="text-danger small mt-1">{{ terms_error }}</div>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          <button type="submit" class="btn btn-primary btn-lg w-100">
+            <i class="bi bi-calendar-check"></i> Confirm Booking Request
+          </button>
+          <p class="text-muted text-center small mt-2">
+            Our team will contact you within 24 hours to confirm.
+          </p>
+        </form>
+      </div>
+    </div>
+
+    <div class="col-md-5">
+      <!-- Availability calendar -->
+      <div class="card border-0 shadow-sm rounded-3 p-3 mb-3">
+        <h6 class="fw-bold mb-2"><i class="bi bi-calendar3"></i> Availability</h6>
+        <div id="book-calendar"></div>
+        <div class="d-flex gap-3 small mt-2">
+          <span><span style="display:inline-block;width:12px;height:12px;background:#dcfce7;border-radius:3px"></span> Free</span>
+          <span><span style="display:inline-block;width:12px;height:12px;background:#fee2e2;border-radius:3px"></span> Booked</span>
+          <span><span style="display:inline-block;width:12px;height:12px;background:#1a56db;border-radius:3px"></span> Selected</span>
+        </div>
+      </div>
+
+      <!-- Summary card -->
+      <div class="card border-0 shadow-sm rounded-3 p-3 bg-primary text-white">
+        <h6 class="fw-semibold mb-2">Booking Summary</h6>
+        <div class="small opacity-90">
+          <div class="d-flex justify-content-between mb-1">
+            <span>Service</span><span>{{ service.name }}</span>
+          </div>
+          {% if service.city %}
+          <div class="d-flex justify-content-between mb-1">
+            <span>Location</span><span>{{ service.city.name }}</span>
+          </div>
+          {% endif %}
+          {% if service.base_price %}
+          <hr class="border-white opacity-25 my-2">
+          <div class="d-flex justify-content-between fw-bold">
+            <span>Base Price</span>
+            <span>{{ service.currency_symbol }}{{ service.base_price|floatformat:0 }} / {{ service.price_unit }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const unavailableDates = new Set({{ unavailable_dates }});
+const eventDateInput = document.querySelector('input[name="event_date"]');
+
+function renderBookCalendar(year, month) {
+  const cal = document.getElementById('book-calendar');
+  const now = new Date();
+  const d = new Date(year, month, 1);
+  const days = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+  let html = `<div class="d-flex justify-content-between align-items-center mb-2">
+    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="bookChangeMonth(-1)">&#8249;</button>
+    <strong style="font-size:.9rem">${d.toLocaleString('default',{month:'long'})} ${year}</strong>
+    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="bookChangeMonth(1)">&#8250;</button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">`;
+
+  days.forEach(day => { html += `<div class="text-center text-muted" style="font-size:.7rem">${day}</div>`; });
+  const startDay = d.getDay();
+  for (let i = 0; i < startDay; i++) html += '<div></div>';
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  for (let day = 1; day <= daysInMonth; day++) {
+    const iso = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const isPast = new Date(year, month, day) < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const isUnavail = unavailableDates.has(iso);
+    const isSelected = eventDateInput && eventDateInput.value === iso;
+    let cls = 'calendar-day ';
+    if (isSelected) cls += 'selected';
+    else if (isPast || isUnavail) cls += 'unavailable';
+    else cls += 'available';
+    const click = (!isPast && !isUnavail) ? `onclick="selectDate('${iso}')"` : '';
+    html += `<div class="${cls}" ${click}>${day}</div>`;
+  }
+  html += '</div>';
+  cal.innerHTML = html;
+}
+
+function selectDate(iso) {
+  if (eventDateInput) { eventDateInput.value = iso; }
+  renderBookCalendar(calYear, calMonth);
+}
+
+let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
+function bookChangeMonth(delta) {
+  calMonth += delta;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderBookCalendar(calYear, calMonth);
+}
+renderBookCalendar(calYear, calMonth);
+</script>
+{% endblock %}

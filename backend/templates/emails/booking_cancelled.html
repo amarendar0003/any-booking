@@ -1,0 +1,53 @@
+{% extends "emails/_base.html" %}
+{% block content %}
+<h2>Booking Cancelled</h2>
+<p class="greeting">Hi {{ booking.customer_name }},</p>
+<p>We're sorry to inform you that your booking for <strong>{{ booking.service.name }}</strong> has been <strong>cancelled</strong>.</p>
+
+<div class="card">
+  <div class="card-row"><span class="label">Confirmation #</span><span class="value" style="font-family:monospace;font-weight:700;letter-spacing:.06em">{{ booking.confirmation_number }}</span></div>
+  <div class="card-row"><span class="label">Booking ID</span><span class="value">#{{ booking.pk }}</span></div>
+  <div class="card-row"><span class="label">Service</span><span class="value">{{ booking.service.name }}</span></div>
+  {% if booking.service.city %}<div class="card-row"><span class="label">Location</span><span class="value">{{ booking.service.city.full_location }}</span></div>{% endif %}
+  <div class="card-row"><span class="label">Event Date</span><span class="value">{{ booking.event_date|date:"D, d M Y" }}</span></div>
+  <div class="card-row"><span class="label">Total Amount</span><span class="value">₹{{ booking.total_amount|floatformat:2 }}</span></div>
+  <div class="card-row"><span class="label">Advance Paid</span><span class="value">₹{{ booking.advance_amount|floatformat:2 }}</span></div>
+  <div class="card-row"><span class="label">Status</span><span class="value"><span class="badge badge-cancelled">Cancelled</span></span></div>
+</div>
+
+{% if booking.cancellation_reason %}
+<p><strong>Reason for cancellation:</strong><br>{{ booking.cancellation_reason }}</p>
+{% endif %}
+
+<!-- Refund section -->
+{% if booking.refund_type == 'full' %}
+<div class="refund-box full">
+  <p style="margin:0;font-weight:700;color:#166534;font-size:15px">✅ Full Refund Approved</p>
+  <p style="margin:8px 0 0;font-size:14px;color:#166534">
+    A full refund of <strong>₹{{ booking.advance_amount|floatformat:2 }}</strong> will be processed to your original payment method within 5–7 business days.
+  </p>
+</div>
+{% elif booking.refund_type == 'partial' %}
+<div class="refund-box">
+  <p style="margin:0;font-weight:700;color:#92400e;font-size:15px">⚠️ Partial Refund Approved</p>
+  <p style="margin:8px 0 0;font-size:14px;color:#78350f">
+    A partial refund of <strong>₹{{ booking.refund_amount|floatformat:2 }}</strong> will be processed to your original payment method within 5–7 business days.
+    {% if booking.admin_notes %}<br><em>{{ booking.admin_notes }}</em>{% endif %}
+  </p>
+</div>
+{% else %}
+<div class="refund-box none">
+  <p style="margin:0;font-weight:700;color:#991b1b;font-size:15px">❌ No Refund</p>
+  <p style="margin:8px 0 0;font-size:14px;color:#7f1d1d">
+    As per our cancellation policy, no refund is applicable for this booking.
+    {% if booking.admin_notes %}<br><em>{{ booking.admin_notes }}</em>{% endif %}
+  </p>
+</div>
+{% endif %}
+
+<p>We're sorry for any inconvenience caused. We hope to serve you again soon.</p>
+
+<a class="btn" href="{{ site_url }}">Browse Other Services</a>
+
+<p style="font-size:13px;color:#64748b">If you believe this cancellation was made in error, please contact us immediately quoting confirmation number <strong style="font-family:monospace">{{ booking.confirmation_number }}</strong>.</p>
+{% endblock %}

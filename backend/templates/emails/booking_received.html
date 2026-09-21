@@ -1,0 +1,31 @@
+{% extends "emails/_base.html" %}
+{% block content %}
+<h2>We've received your booking request!</h2>
+<p class="greeting">Hi {{ booking.customer_name }},</p>
+<p>Thank you for choosing <strong>{{ booking.service.name }}</strong>. Your booking request has been received and is currently under review. We'll send you a confirmation once it's approved.</p>
+
+<div class="card">
+  <div class="card-row"><span class="label">Confirmation #</span><span class="value" style="font-family:monospace;font-weight:700;letter-spacing:.06em;font-size:16px;color:#1a56db">{{ booking.confirmation_number }}</span></div>
+  <div class="card-row"><span class="label">Booking ID</span><span class="value">#{{ booking.pk }}</span></div>
+  <div class="card-row"><span class="label">Service</span><span class="value">{{ booking.service.name }}</span></div>
+  {% if booking.service.city %}<div class="card-row"><span class="label">Location</span><span class="value">{{ booking.service.city.full_location }}</span></div>{% endif %}
+  <div class="card-row"><span class="label">Event Date</span><span class="value"><strong>{{ booking.event_date|date:"D, d M Y" }}</strong>{% if booking.event_end_date %} – {{ booking.event_end_date|date:"d M Y" }}{% endif %}</span></div>
+  {% if booking.event_time %}<div class="card-row"><span class="label">Event Time</span><span class="value">{{ booking.event_time|time:"h:i A" }}</span></div>{% endif %}
+  <div class="card-row"><span class="label">Guests</span><span class="value">{{ booking.guest_count }}</span></div>
+  <div class="card-row"><span class="label">Total Amount</span><span class="value"><strong>₹{{ booking.total_amount|floatformat:2 }}</strong></span></div>
+  <div class="card-row"><span class="label">Advance Paid</span><span class="value">₹{{ booking.advance_amount|floatformat:2 }}</span></div>
+  <div class="card-row"><span class="label">Balance Due</span><span class="value">₹{{ booking.balance_amount|floatformat:2 }}</span></div>
+  <div class="card-row"><span class="label">Status</span><span class="value"><span class="badge badge-{{ booking.status }}">{{ booking.get_status_display }}</span></span></div>
+</div>
+
+{% if booking.special_requests %}
+<p><strong>Your special requests:</strong><br>{{ booking.special_requests }}</p>
+{% endif %}
+
+<p>Our team will review your request and get back to you shortly. If you have any questions, please contact us by replying to this email or visiting our website.</p>
+
+<a class="btn" href="{{ site_url }}">Visit AnyBooking</a>
+
+<p style="font-size:13px;color:#64748b">Keep your confirmation number <strong style="font-family:monospace">{{ booking.confirmation_number }}</strong> handy — you can use it to find your booking at any time.</p>
+<p style="font-size:13px;color:#64748b"><a href="{{ site_url }}{% url 'booking_lookup' %}">Find My Booking →</a></p>
+{% endblock %}

@@ -1,0 +1,403 @@
+name: Deploy AnyBooking to Google Cloud
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      deploy_target:
+        description: "What to deploy — 'all' includes iOS (macos-latest runner, bills at 10x); defaults to just 'api' so a quick click never triggers it by accident"
+        type: choice
+        options:
+          - all
+          - api
+          - web
+          - android
+          - ios
+        default: api
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-central1
+  SERVICE_NAME: any-booking
+  REPOSITORY: any-booking-repo
+  IMAGE: any-booking
+
+jobs:
+  resolve-targets:
+    name: Resolve deploy targets
+    runs-on: ubuntu-latest
+    outputs:
+      run_api: ${{ steps.resolve.outputs.run_api }}
+      run_web: ${{ steps.resolve.outputs.run_web }}
+      run_android: ${{ steps.resolve.outputs.run_android }}
+      run_ios: ${{ steps.resolve.outputs.run_ios }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve which jobs should run
+        id: resolve
+        run: |
+          # A plain push behaves like it always has: it can touch api, web,
+          # and android, never ios (that's opt-in-only, see the ios job
+          # below) — but each of those three only actually rebuilds if its
+          # own paths changed since the previous commit, instead of
+          # unconditionally rebuilding all of them on every push. A manual
+          # workflow_dispatch picks one of the deploy_target choices instead
+          # and always builds exactly what's picked, diff or no diff —
+          # 'all' is the only one that includes ios.
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            TARGET="push"
+          else
+            TARGET="${{ github.event.inputs.deploy_target }}"
+          fi
+
+          # changed_since_last_push PATH... — true if PATH changed between
+          # the previous and current commit, or if that comparison isn't
+          # possible (first push, or the previous commit is missing from
+          # this checkout for some reason) — in which case it defaults to
+          # true so an unrelated CI quirk never silently skips a real change.
+          changed_since_last_push() {
+            local before="${{ github.event.before }}"
+            if [[ -z "$before" || "$before" =~ ^0+$ ]] || ! git cat-file -e "$before" 2>/dev/null; then
+              return 0
+            fi
+            ! git diff --quiet "$before" "${{ github.sha }}" -- "$@"
+          }
+
+          # run_api gates whether the backend job actually rebuilds/redeploys
+          # the API — the backend job itself always runs regardless (every
+          # other job needs its `url` output), it just falls back to reading
+          # the *currently deployed* URL via `gcloud run services describe`
+          # when the API itself doesn't need rebuilding.
+          run_api=false; run_web=false; run_android=false; run_ios=false
+          case "$TARGET" in
+            push)
+              changed_since_last_push backend/ && run_api=true
+              changed_since_last_push lib/ pubspec.yaml pubspec.lock assets/ analysis_options.yaml web/ firebase.json && run_web=true
+              changed_since_last_push lib/ pubspec.yaml pubspec.lock assets/ analysis_options.yaml android/ && run_android=true
+              ;;
+            all) run_api=true; run_web=true; run_android=true; run_ios=true ;;
+            api) run_api=true ;;
+            web) run_web=true ;;
+            android) run_android=true ;;
+            ios) run_ios=true ;;
+            *) echo "::error::Unknown deploy_target: $TARGET" >&2; exit 1 ;;
+          esac
+
+          {
+            echo "run_api=$run_api"
+            echo "run_web=$run_web"
+            echo "run_android=$run_android"
+            echo "run_ios=$run_ios"
+          } >> "$GITHUB_OUTPUT"
+
+  backend:
+    name: Deploy Django API
+    needs: resolve-targets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Run Django checks and tests
+        if: needs.resolve-targets.outputs.run_api == 'true'
+        working-directory: backend
+        env:
+          SECRET_KEY: ci-test-secret-key
+          DATABASE_URL: sqlite:///ci.sqlite3
+          ALLOWED_HOSTS: localhost,127.0.0.1,testserver
+        run: |
+          pip install -r requirements.txt
+          python manage.py check
+          # Several templates reference {% static %}, and STORAGES uses
+          # whitenoise's manifest storage unconditionally (not just in
+          # production) — collectstatic must run before manage.py test can
+          # render them, same as the Dockerfile does at image build time.
+          python manage.py collectstatic --noinput
+          python manage.py test
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and push backend image
+        if: needs.resolve-targets.outputs.run_api == 'true'
+        run: |
+          IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${{ github.sha }}"
+          gcloud builds submit backend --tag "$IMAGE_URI" \
+            --gcs-log-dir="gs://${{ env.PROJECT_ID }}-build-logs/logs"
+          echo "IMAGE_URI=$IMAGE_URI" >> "$GITHUB_ENV"
+
+      - name: Deploy backend to Cloud Run
+        if: needs.resolve-targets.outputs.run_api == 'true'
+        run: |
+          gcloud run deploy "${{ env.SERVICE_NAME }}" \
+            --image "$IMAGE_URI" \
+            --region "${{ env.REGION }}" \
+            --platform managed \
+            --allow-unauthenticated \
+            --add-cloudsql-instances "${{ secrets.CLOUD_SQL_INSTANCE }}" \
+            --set-env-vars "^|^ALLOWED_HOSTS=${{ secrets.CLOUD_RUN_HOST }}|CORS_ALLOWED_ORIGINS=https://${{ env.PROJECT_ID }}.web.app,https://${{ env.PROJECT_ID }}.firebaseapp.com" \
+            --set-secrets "SECRET_KEY=DJANGO_SECRET_KEY:latest,DATABASE_URL=DATABASE_URL:latest,RAZORPAY_KEY_ID=RAZORPAY_KEY_ID:latest,RAZORPAY_KEY_SECRET=RAZORPAY_KEY_SECRET:latest,EMAIL_BACKEND=EMAIL_BACKEND:latest,EMAIL_HOST=EMAIL_HOST:latest,EMAIL_HOST_USER=EMAIL_HOST_USER:latest,EMAIL_HOST_PASSWORD=EMAIL_HOST_PASSWORD:latest,DEFAULT_FROM_EMAIL=DEFAULT_FROM_EMAIL:latest,ADMIN_NOTIFY_EMAIL=ADMIN_NOTIFY_EMAIL:latest,SITE_URL=SITE_URL:latest,GCS_MEDIA_BUCKET=GCS_MEDIA_BUCKET:latest" \
+            --memory 512Mi \
+            --cpu 1 \
+            --concurrency 80 \
+            --timeout 120
+
+      - name: Resolve backend URL
+        id: deploy
+        run: |
+          SERVICE_URL="$(gcloud run services describe "${{ env.SERVICE_NAME }}" --region "${{ env.REGION }}" --platform managed --format='value(status.url)')"
+          if [[ -z "$SERVICE_URL" ]]; then
+            echo "::error::gcloud run services describe returned an empty URL — refusing to let frontend/android/ios build against a blank API_BASE_URL" >&2
+            exit 1
+          fi
+          echo "url=$SERVICE_URL" >> "$GITHUB_OUTPUT"
+
+  frontend:
+    name: Deploy Flutter web app
+    runs-on: ubuntu-latest
+    needs: [resolve-targets, backend]
+    if: needs.resolve-targets.outputs.run_web == 'true'
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.4"
+          cache: true
+
+      - name: Build Flutter web app
+        env:
+          API_BASE_URL: ${{ needs.backend.outputs.url }}/api
+        run: |
+          flutter create --platforms=web .
+          flutter pub get
+          flutter build web --release --build-number="${{ github.run_number }}" \
+            --dart-define=API_BASE_URL="$API_BASE_URL"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Deploy Flutter web app to Firebase Hosting
+        run: firebase deploy --only hosting --project "${{ env.PROJECT_ID }}" --non-interactive
+
+  android:
+    name: Build & distribute Android app
+    runs-on: ubuntu-latest
+    needs: [resolve-targets, backend]
+    if: needs.resolve-targets.outputs.run_android == 'true'
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      # `if:` conditions can't see the secrets context directly, so this
+      # step reads the secret in a `run:` block (which can) and exposes it
+      # as a step output that later `if:` conditions can check instead. The
+      # whole job is a no-op until the Android app is registered in Firebase
+      # and its App ID is added as a secret — see
+      # README.md#android-app-firebase-app-distribution
+      - name: Check whether Android distribution is configured
+        id: check
+        run: |
+          if [[ -n "${{ secrets.FIREBASE_ANDROID_APP_ID }}" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out repository
+        if: steps.check.outputs.enabled == 'true'
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        if: steps.check.outputs.enabled == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        if: steps.check.outputs.enabled == 'true'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.4"
+          cache: true
+
+      - name: Build Android app
+        if: steps.check.outputs.enabled == 'true'
+        env:
+          API_BASE_URL: ${{ needs.backend.outputs.url }}/api
+        run: |
+          flutter create --platforms=android .
+          flutter pub get
+          flutter build apk --release --build-number="${{ github.run_number }}" \
+            --dart-define=API_BASE_URL="$API_BASE_URL"
+
+      - name: Authenticate to Google Cloud
+        if: steps.check.outputs.enabled == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Install Firebase CLI
+        if: steps.check.outputs.enabled == 'true'
+        run: npm install -g firebase-tools
+
+      - name: Distribute to Firebase App Distribution
+        if: steps.check.outputs.enabled == 'true'
+        run: |
+          TESTER_GROUP="${{ secrets.FIREBASE_TESTER_GROUP }}"
+          firebase appdistribution:distribute build/app/outputs/flutter-apk/app-release.apk \
+            --app "${{ secrets.FIREBASE_ANDROID_APP_ID }}" \
+            --groups "${TESTER_GROUP:-testers}" \
+            --release-notes "Automated build from ${{ github.sha }}" \
+            --project "${{ env.PROJECT_ID }}"
+
+  ios:
+    name: Build & distribute iOS app to TestFlight
+    # Skipped by default (macos-latest runners bill at 10x the Linux rate) —
+    # only runs on a manual workflow_dispatch with deploy_target=all or ios,
+    # e.g. `gh workflow run deploy.yml -f deploy_target=ios` or picking one
+    # of those in the Actions tab's "Run workflow" dialog.
+    if: needs.resolve-targets.outputs.run_ios == 'true'
+    runs-on: macos-latest
+    needs: [resolve-targets, backend]
+    permissions:
+      contents: read
+
+    steps:
+      # The whole job is a no-op until the iOS app is registered in the Apple
+      # Developer portal / App Store Connect and its signing secrets are
+      # added — see README.md#ios-app-testflight
+      - name: Check whether iOS distribution is configured
+        id: check
+        run: |
+          if [[ -n "${{ secrets.IOS_DIST_CERTIFICATE_BASE64 }}" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out repository
+        if: steps.check.outputs.enabled == 'true'
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        if: steps.check.outputs.enabled == 'true'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.4"
+          cache: true
+
+      - name: Import signing certificate and provisioning profile
+        if: steps.check.outputs.enabled == 'true'
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.IOS_DIST_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.IOS_DIST_CERTIFICATE_PASSWORD }}
+          PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+        run: |
+          CERT_PATH="$RUNNER_TEMP/dist_certificate.p12"
+          PROFILE_PATH="$RUNNER_TEMP/profile.mobileprovision"
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+
+          echo -n "$CERTIFICATE_BASE64" | base64 --decode -o "$CERT_PATH"
+          echo -n "$PROFILE_BASE64" | base64 --decode -o "$PROFILE_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$CERTIFICATE_PASSWORD" -A \
+            -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | sed 's/"//g')
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/
+
+      - name: Build iOS app
+        if: steps.check.outputs.enabled == 'true'
+        env:
+          API_BASE_URL: ${{ needs.backend.outputs.url }}/api
+          APPSTORE_TEAM_ID: ${{ secrets.APPSTORE_TEAM_ID }}
+          PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+        run: |
+          flutter create --platforms=ios .
+          flutter pub get
+
+          cat > ios/ExportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>teamID</key>
+            <string>${APPSTORE_TEAM_ID}</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.anybooking.app</key>
+              <string>${PROFILE_NAME}</string>
+            </dict>
+          </dict>
+          </plist>
+          PLIST
+
+          flutter build ipa --release --build-number="${{ github.run_number }}" \
+            --dart-define=API_BASE_URL="$API_BASE_URL" \
+            --export-options-plist=ios/ExportOptions.plist
+
+      - name: Upload to TestFlight
+        if: steps.check.outputs.enabled == 'true'
+        env:
+          APPSTORE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          APPSTORE_API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+          APPSTORE_API_PRIVATE_KEY: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$APPSTORE_API_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_API_KEY_ID}.p8
+          xcrun altool --upload-app -f build/ios/ipa/*.ipa -t ios \
+            --apiKey "$APPSTORE_API_KEY_ID" --apiIssuer "$APPSTORE_API_ISSUER_ID"

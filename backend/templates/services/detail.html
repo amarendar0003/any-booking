@@ -1,0 +1,279 @@
+{% extends 'base.html' %}
+{% load static local_names %}
+{% block title %}{{ service.name }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb-hero">
+  <div class="container">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-0 small">
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'service_list_by_category' service.category.slug %}">{% service_cat_name service.category %}</a></li>
+        <li class="breadcrumb-item active">{{ service.name }}</li>
+      </ol>
+    </nav>
+  </div>
+</div>
+
+<div class="container my-4">
+  <div class="row g-4">
+
+    {# ── Left column ──────────────────────────────────────────────────── #}
+    <div class="col-lg-8">
+
+      {# Photo gallery #}
+      {% if images %}
+      <div id="serviceCarousel" class="carousel slide detail-carousel" data-bs-ride="carousel">
+        <div class="carousel-inner">
+          {% for img in images %}
+          <div class="carousel-item {% if forloop.first %}active{% endif %}">
+            <img src="{{ img.image.url }}" class="d-block w-100" alt="{{ img.caption }}">
+            {% if img.caption %}<div class="carousel-caption d-none d-md-block"><small>{{ img.caption }}</small></div>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% if images.count > 1 %}
+        <button class="carousel-control-prev" type="button" data-bs-target="#serviceCarousel" data-bs-slide="prev">
+          <span class="carousel-control-prev-icon"></span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#serviceCarousel" data-bs-slide="next">
+          <span class="carousel-control-next-icon"></span>
+        </button>
+        {% endif %}
+      </div>
+      {% else %}
+      <img src="{% static 'img/AnyBookingMainLogo.jpg' %}" class="d-block w-100 detail-placeholder service-default-image" alt="{{ service.name }}">
+      {% endif %}
+
+      {# Title block #}
+      <div class="detail-card">
+        <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+          <div>
+            <span class="badge-category me-2">{% service_cat_name service.category %}</span>
+            {% if service.is_featured %}
+            <span class="badge-featured" style="position:static;display:inline-block">⭐ Featured</span>
+            {% endif %}
+          </div>
+        </div>
+        <h2 style="font-size:1.6rem;font-weight:900;letter-spacing:-0.6px;color:#0f172a;margin-bottom:6px">{{ service.name }}</h2>
+        <p class="text-muted mb-2" style="font-size:.88rem">
+          <i class="bi bi-shop"></i> {{ service.vendor.name }}
+          {% if service.city %}
+          &nbsp;·&nbsp; <i class="bi bi-geo-alt"></i>
+          {{ service.city.name }}, {{ service.city.district.name }}, {{ service.city.state.name }}
+          {% endif %}
+        </p>
+        {% if service.avg_rating %}
+        <div class="d-flex align-items-center gap-2">
+          <span style="color:#f59e0b">
+            {% for i in "12345" %}
+              {% if forloop.counter <= service.avg_rating %}
+                <i class="bi bi-star-fill"></i>
+              {% else %}
+                <i class="bi bi-star"></i>
+              {% endif %}
+            {% endfor %}
+          </span>
+          <strong style="font-size:.9rem">{{ service.avg_rating|floatformat:1 }}</strong>
+          <span class="text-muted" style="font-size:.82rem">({{ reviews|length }} review{{ reviews|length|pluralize }})</span>
+        </div>
+        {% endif %}
+      </div>
+
+      {# Description #}
+      {% if service.description %}
+      <div class="detail-card">
+        <h5>About</h5>
+        <p class="mb-0" style="font-size:.92rem;color:#334155">{{ service.description }}</p>
+      </div>
+      {% endif %}
+
+      {# Features & Details #}
+      <div class="detail-card">
+        <h5>Features &amp; Details</h5>
+        <div class="row g-2">
+          {% for av in attr_values %}
+          <div class="col-sm-6">
+            <div class="feature-item">
+              {% if av.attribute.data_type == 'boolean' %}
+                <i class="bi {% if av.value_boolean %}bi-check-circle-fill text-success{% else %}bi-x-circle-fill text-danger{% endif %} fs-5 mt-1"></i>
+              {% else %}
+                <i class="bi bi-info-circle text-primary fs-5 mt-1"></i>
+              {% endif %}
+              <div>
+                <div class="feat-label">{{ av.attribute|local_attr_name:request }}</div>
+                <div class="feat-value">{{ av.display_value }}</div>
+              </div>
+            </div>
+          </div>
+          {% empty %}
+          <p class="text-muted small">No features listed.</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# Contact #}
+      <div class="detail-card">
+        <h5>Contact</h5>
+        <p class="mb-1" style="font-size:.9rem"><i class="bi bi-person text-primary"></i> <strong>{{ service.vendor.name }}</strong></p>
+        {% if service.vendor.phone %}
+        <p class="mb-1" style="font-size:.9rem"><i class="bi bi-telephone text-primary"></i> {{ service.vendor.phone }}</p>
+        {% endif %}
+        {% if service.vendor.email %}
+        <p class="mb-0" style="font-size:.9rem"><i class="bi bi-envelope text-primary"></i> {{ service.vendor.email }}</p>
+        {% endif %}
+      </div>
+
+      {# Reviews #}
+      <div class="detail-card">
+        <h5>
+          <i class="bi bi-star-half text-warning"></i> Reviews
+          {% if service.avg_rating %}
+          <span class="text-warning ms-1" style="font-size:.85rem">
+            {% for i in "12345" %}
+              {% if forloop.counter <= service.avg_rating %}<i class="bi bi-star-fill"></i>{% else %}<i class="bi bi-star"></i>{% endif %}
+            {% endfor %}
+          </span>
+          <span class="text-muted fw-normal" style="font-size:.8rem">({{ reviews|length }})</span>
+          {% endif %}
+        </h5>
+
+        {% if reviews %}
+          {% for review in reviews %}
+          <div class="d-flex gap-3 pb-3 mb-3 {% if not forloop.last %}border-bottom{% endif %}">
+            <div class="review-avatar" style="background:{% cycle '#0ea5e9' '#0369a1' '#f59e0b' '#16a34a' '#7c3aed' '#dc2626' %}">
+              {{ review.reviewer_name|slice:":1"|upper }}
+            </div>
+            <div style="flex:1">
+              <div class="d-flex align-items-center gap-2 mb-1">
+                <strong style="font-size:.88rem">{{ review.reviewer_name }}</strong>
+                <span style="color:#f59e0b;font-size:.75rem">
+                  {% for i in "12345" %}
+                    {% if forloop.counter <= review.rating %}<i class="bi bi-star-fill"></i>{% else %}<i class="bi bi-star"></i>{% endif %}
+                  {% endfor %}
+                </span>
+                <span class="text-muted" style="font-size:.75rem">{{ review.created_at|date:"N j, Y" }}</span>
+              </div>
+              <p class="mb-0" style="font-size:.85rem;color:#475569">{{ review.body }}</p>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-muted small">No reviews yet — be the first!</p>
+        {% endif %}
+
+        {# Leave a review form #}
+        <h6 class="fw-bold mt-3 mb-3" style="font-size:.9rem">Leave a Review</h6>
+        <form method="post" action="{% url 'add_review' service.slug %}">
+          {% csrf_token %}
+          <div class="mb-2">
+            <label class="form-label small fw-semibold">Your name</label>
+            {{ review_form.reviewer_name.errors }}
+            <input type="text" name="reviewer_name" class="form-control form-control-sm" placeholder="Your name" required
+                   style="border:1.5px solid #e2e8f0;border-radius:9px">
+          </div>
+          <div class="mb-2">
+            <label class="form-label small fw-semibold">Rating</label>
+            {{ review_form.rating.errors }}
+            <div class="d-flex gap-2 align-items-center">
+              {% for val in "12345" %}
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="rating" id="star{{ val }}" value="{{ val }}" required
+                       style="accent-color:#0ea5e9">
+                <label class="form-check-label small" for="star{{ val }}">{{ val }}★</label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Your experience</label>
+            {{ review_form.body.errors }}
+            <textarea name="body" class="form-control form-control-sm" rows="3"
+                      placeholder="Share your experience…" required
+                      style="border:1.5px solid #e2e8f0;border-radius:9px"></textarea>
+          </div>
+          <button type="submit" class="btn-apply" style="width:auto;padding:8px 20px">Submit Review</button>
+        </form>
+      </div>
+
+    </div>
+
+    {# ── Right: booking panel ─────────────────────────────────────────── #}
+    <div class="col-lg-4">
+      <div class="booking-panel">
+        {% if service.base_price %}
+        <div class="booking-price">{{ service.currency_symbol }}{{ service.base_price|floatformat:0 }}</div>
+        <div class="text-muted mb-3" style="font-size:.82rem">{{ service.price_unit }}</div>
+        {% else %}
+        <div class="text-muted mb-3">Price on request</div>
+        {% endif %}
+
+        <h6 class="fw-semibold mb-2" style="font-size:.85rem"><i class="bi bi-calendar3"></i> Availability</h6>
+        <div id="mini-calendar" class="mb-3" style="background:#f8fafc;border-radius:10px;padding:10px"></div>
+        <div class="d-flex gap-3 small mb-4">
+          <span class="d-flex align-items-center gap-1">
+            <span style="width:14px;height:14px;background:#dcfce7;border-radius:3px;display:inline-block"></span> Available
+          </span>
+          <span class="d-flex align-items-center gap-1">
+            <span style="width:14px;height:14px;background:#fee2e2;border-radius:3px;display:inline-block"></span> Booked
+          </span>
+        </div>
+
+        <a href="{% url 'booking_create' service.slug %}" class="btn-book-now">
+          <i class="bi bi-calendar-plus"></i> Book Now
+        </a>
+        <p class="text-muted text-center mt-2 mb-0" style="font-size:.78rem">No charges until confirmed</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const unavailableDates = new Set({{ unavailable_dates|safe }});
+
+function renderCalendar(year, month) {
+  const cal = document.getElementById('mini-calendar');
+  const now = new Date();
+  const d = new Date(year, month, 1);
+  const days = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+  let html = `<div class="d-flex justify-content-between align-items-center mb-2">
+    <button class="btn btn-sm btn-outline-secondary py-0" onclick="changeMonth(-1)">‹</button>
+    <strong style="font-size:.82rem">${d.toLocaleString('default',{month:'long'})} ${year}</strong>
+    <button class="btn btn-sm btn-outline-secondary py-0" onclick="changeMonth(1)">›</button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">`;
+
+  days.forEach(day => { html += `<div class="text-center text-muted" style="font-size:.65rem;padding:2px">${day}</div>`; });
+
+  const startDay = d.getDay();
+  for (let i = 0; i < startDay; i++) html += '<div></div>';
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  for (let day = 1; day <= daysInMonth; day++) {
+    const iso = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const isPast = new Date(year, month, day) < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const isUnavail = unavailableDates.has(iso);
+    let cls = 'calendar-day ';
+    if (isPast || isUnavail) cls += 'unavailable';
+    else cls += 'available';
+    html += `<div class="${cls}" title="${iso}">${day}</div>`;
+  }
+  html += '</div>';
+  cal.innerHTML = html;
+}
+
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+function changeMonth(delta) {
+  calMonth += delta;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendar(calYear, calMonth);
+}
+renderCalendar(calYear, calMonth);
+</script>
+{% endblock %}

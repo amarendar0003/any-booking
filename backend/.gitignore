@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+ci.sqlite3
+staticfiles/
+media/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Node (if added later)
+node_modules/
+
+graphify-out/
+
+# Claude Code worktrees
+.claude/worktrees/
+
+# Superpowers session artifacts
+.superpowers/
+
+# Test databases
+test.sqlite3
+.gstack/

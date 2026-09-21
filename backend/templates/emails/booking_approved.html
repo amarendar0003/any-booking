@@ -1,0 +1,35 @@
+{% extends "emails/_base.html" %}
+{% block content %}
+<h2>🎉 Your Booking is Confirmed!</h2>
+<p class="greeting">Hi {{ booking.customer_name }},</p>
+<p>Great news! Your booking for <strong>{{ booking.service.name }}</strong> has been <strong>confirmed</strong>. We look forward to making your event special.</p>
+
+<div class="card">
+  <div class="card-row"><span class="label">Confirmation #</span><span class="value" style="font-family:monospace;font-weight:700;letter-spacing:.06em;font-size:16px;color:#1a56db">{{ booking.confirmation_number }}</span></div>
+  <div class="card-row"><span class="label">Booking ID</span><span class="value">#{{ booking.pk }}</span></div>
+  <div class="card-row"><span class="label">Service</span><span class="value">{{ booking.service.name }}</span></div>
+  {% if booking.service.city %}<div class="card-row"><span class="label">Location</span><span class="value">{{ booking.service.city.full_location }}</span></div>{% endif %}
+  <div class="card-row"><span class="label">Event Date</span><span class="value"><strong>{{ booking.event_date|date:"D, d M Y" }}</strong>{% if booking.event_end_date %} – {{ booking.event_end_date|date:"d M Y" }}{% endif %}</span></div>
+  {% if booking.event_time %}<div class="card-row"><span class="label">Event Time</span><span class="value">{{ booking.event_time|time:"h:i A" }}</span></div>{% endif %}
+  <div class="card-row"><span class="label">Guests</span><span class="value">{{ booking.guest_count }}</span></div>
+  <div class="card-row"><span class="label">Total Amount</span><span class="value"><strong>₹{{ booking.total_amount|floatformat:2 }}</strong></span></div>
+  <div class="card-row"><span class="label">Advance Paid</span><span class="value">₹{{ booking.advance_amount|floatformat:2 }}</span></div>
+  <div class="card-row"><span class="label">Balance Due on Event Day</span><span class="value"><strong>₹{{ booking.balance_amount|floatformat:2 }}</strong></span></div>
+  <div class="card-row"><span class="label">Status</span><span class="value"><span class="badge badge-confirmed">Confirmed</span></span></div>
+</div>
+
+{% if booking.admin_notes %}
+<p><strong>Note from our team:</strong><br>{{ booking.admin_notes }}</p>
+{% endif %}
+
+<p><strong>What's next?</strong></p>
+<ul style="font-size:14px;line-height:1.8;padding-left:20px">
+  <li>Please ensure the balance of <strong>₹{{ booking.balance_amount|floatformat:2 }}</strong> is paid on the day of your event.</li>
+  <li>Arrive a few minutes early to complete any last-minute arrangements.</li>
+  <li>Contact us if your guest count or requirements change.</li>
+</ul>
+
+<a class="btn" href="{{ site_url }}">Visit AnyBooking</a>
+
+<p style="font-size:13px;color:#64748b">Confirmation #: <strong style="font-family:monospace">{{ booking.confirmation_number }}</strong> — quote this in any correspondence, or use it to <a href="{{ site_url }}{% url 'booking_lookup' %}">look up your booking online</a>.</p>
+{% endblock %}

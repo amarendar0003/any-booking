@@ -1,0 +1,548 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Dashboard — AnyBooking Admin{% endblock %}
+{% block content_title %}{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  /* ── Layout ────────────────────────────────────────────────────────── */
+  #dashboard { font-family: var(--font-family-primary, "Roboto","Lucida Grande",Verdana,Arial,sans-serif); }
+
+  .db-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+  .db-header h1 { margin: 0; font-size: 1.6rem; color: #1a1a2e; }
+  .scope-badge {
+    background: #e8f0fe; color: #1a56db;
+    padding: .3rem .8rem; border-radius: 999px; font-size: .8rem; font-weight: 600;
+  }
+
+  /* ── Stat cards ────────────────────────────────────────────────────── */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .stat-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+    padding: 1rem 1.2rem; position: relative; overflow: hidden;
+  }
+  .stat-card::before {
+    content: ''; position: absolute; top: 0; left: 0;
+    width: 4px; height: 100%; background: var(--accent, #417690);
+  }
+  .stat-card .label { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; }
+  .stat-card .value { font-size: 1.8rem; font-weight: 700; color: #111; line-height: 1.1; margin: .25rem 0 .1rem; }
+  .stat-card .sub { font-size: .75rem; color: #6b7280; }
+
+  .card-blue   { --accent: #2563eb; }
+  .card-green  { --accent: #16a34a; }
+  .card-orange { --accent: #d97706; }
+  .card-red    { --accent: #dc2626; }
+  .card-purple { --accent: #7c3aed; }
+  .card-teal   { --accent: #0d9488; }
+  .card-gray   { --accent: #6b7280; }
+  .card-indigo { --accent: #4f46e5; }
+  .card-sky    { --accent: #0284c7; }
+
+  /* ── Section heading ───────────────────────────────────────────────── */
+  .section-head {
+    font-size: .8rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .06em; color: #6b7280;
+    border-bottom: 2px solid #e5e7eb; padding-bottom: .4rem; margin: 1.8rem 0 1rem;
+  }
+
+  /* ── Two-column charts row ─────────────────────────────────────────── */
+  .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+  @media (max-width: 900px) { .chart-row { grid-template-columns: 1fr; } }
+  .chart-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 1.2rem;
+  }
+  .chart-card h3 { margin: 0 0 .8rem; font-size: .9rem; color: #374151; }
+  .chart-card canvas { max-height: 220px; }
+
+  /* ── Tables ────────────────────────────────────────────────────────── */
+  .db-table-wrap {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+    overflow: hidden; margin-bottom: 1.5rem;
+  }
+  .db-table-wrap h3 {
+    margin: 0; padding: .9rem 1.2rem; font-size: .9rem;
+    background: #f9fafb; border-bottom: 1px solid #e5e7eb; color: #374151;
+  }
+  .db-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  .db-table th {
+    text-align: left; padding: .55rem 1rem;
+    background: #f3f4f6; color: #6b7280; font-size: .72rem;
+    text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid #e5e7eb;
+  }
+  .db-table td { padding: .55rem 1rem; border-bottom: 1px solid #f3f4f6; color: #374151; }
+  .db-table tr:last-child td { border-bottom: none; }
+  .db-table tr:hover td { background: #f9fafb; }
+
+  /* ── Status badges ─────────────────────────────────────────────────── */
+  .badge {
+    display: inline-block; padding: .15rem .55rem;
+    border-radius: 999px; font-size: .7rem; font-weight: 600;
+  }
+  .badge-pending  { background: #fef3c7; color: #92400e; }
+  .badge-confirmed{ background: #d1fae5; color: #065f46; }
+  .badge-completed{ background: #dbeafe; color: #1e40af; }
+  .badge-cancelled{ background: #fee2e2; color: #991b1b; }
+
+  /* ── Three-col layout for bottom tables ───────────────────────────── */
+  .bottom-row { display: grid; grid-template-columns: 1.6fr 1fr; gap: 1rem; }
+  @media (max-width: 900px) { .bottom-row { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="dashboard">
+
+  <!-- ── Header ───────────────────────────────────────────────────────── -->
+  <div class="db-header">
+    <span class="scope-badge">📍 {{ scope_label }}</span>
+  </div>
+
+  <!-- ── Top stat cards ───────────────────────────────────────────────── -->
+  <div class="stat-grid">
+
+    <div class="stat-card card-blue">
+      <div class="label">Total Bookings</div>
+      <div class="value">{{ total }}</div>
+      <div class="sub">{{ today_count|default:0 }} today · {{ this_week|default:0 }} this week</div>
+    </div>
+
+    <div class="stat-card card-green">
+      <div class="label">Confirmed</div>
+      <div class="value">{{ confirmed }}</div>
+      <div class="sub">{{ pending }} pending</div>
+    </div>
+
+    <div class="stat-card card-teal">
+      <div class="label">Completed</div>
+      <div class="value">{{ completed }}</div>
+      <div class="sub">{{ this_month }} bookings this month</div>
+    </div>
+
+    <div class="stat-card card-red">
+      <div class="label">Cancelled</div>
+      <div class="value">{{ cancelled }}</div>
+      <div class="sub">&nbsp;</div>
+    </div>
+
+    <div class="stat-card card-purple">
+      <div class="label">Total Order Value</div>
+      <div class="value">₹{{ total_value|floatformat:0 }}</div>
+      <div class="sub">across active bookings</div>
+    </div>
+
+    <div class="stat-card card-sky">
+      <div class="label">Advance Collected</div>
+      <div class="value">₹{{ advance_collected|floatformat:0 }}</div>
+      <div class="sub">₹{{ balance_outstanding|floatformat:0 }} balance pending</div>
+    </div>
+
+    <div class="stat-card card-indigo">
+      <div class="label">Payments Captured</div>
+      <div class="value">₹{{ paid|floatformat:0 }}</div>
+      <div class="sub">online payments</div>
+    </div>
+
+    <div class="stat-card card-orange">
+      <div class="label">Refunded</div>
+      <div class="value">₹{{ refunded|floatformat:0 }}</div>
+      <div class="sub">{{ failed_count }} failed payment{{ failed_count|pluralize }}</div>
+    </div>
+
+    <div class="stat-card card-gray">
+      <div class="label">Active Services</div>
+      <div class="value">{{ catalog.active_services }}</div>
+      <div class="sub">{{ catalog.services }} total · {{ catalog.vendors }} vendors</div>
+    </div>
+
+  </div>
+
+  <!-- ── Charts ───────────────────────────────────────────────────────── -->
+  <div class="section-head">Trends</div>
+  <div class="chart-row">
+
+    <div class="chart-card">
+      <h3>Bookings — last 30 days</h3>
+      <canvas id="chartDaily"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <h3>Revenue — last 6 months</h3>
+      <canvas id="chartRevenue"></canvas>
+    </div>
+
+  </div>
+
+  <!-- ── Booking status doughnut + top services ───────────────────────── -->
+  <div class="chart-row">
+
+    <div class="chart-card">
+      <h3>Booking Status Breakdown</h3>
+      <canvas id="chartStatus" style="max-height:200px;"></canvas>
+    </div>
+
+    <div class="chart-card" style="padding:0; overflow:hidden;">
+      <h3 style="padding:.9rem 1.2rem; margin:0; background:#f9fafb; border-bottom:1px solid #e5e7eb;">Top Services by Bookings</h3>
+      <table class="db-table">
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Category</th>
+            <th style="text-align:right">Bookings</th>
+            <th style="text-align:right">Confirmed</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for svc in top_services %}
+          <tr>
+            <td>
+              <a href="{% url 'admin:services_service_change' svc.pk %}" style="color:#2563eb;text-decoration:none">
+                {{ svc.name|truncatechars:30 }}
+              </a>
+            </td>
+            <td>{{ svc.category }}</td>
+            <td style="text-align:right;font-weight:600">{{ svc.booking_count }}</td>
+            <td style="text-align:right;color:#16a34a">{{ svc.confirmed_count }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" style="color:#9ca3af;padding:1rem">No services yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  {% if request.user.is_superuser %}
+  <!-- ── Usage analytics ─────────────────────────────────────────────── -->
+  <div class="section-head">App &amp; Web Usage</div>
+  <div class="stat-grid">
+
+    <div class="stat-card card-teal">
+      <div class="label">Total Devices</div>
+      <div class="value">{{ usage_totals.total_devices }}</div>
+      <div class="sub">unique installs, all time</div>
+    </div>
+
+    <div class="stat-card card-blue">
+      <div class="label">Opens Today</div>
+      <div class="value">{{ usage_totals.events_today }}</div>
+      <div class="sub">&nbsp;</div>
+    </div>
+
+    <div class="stat-card card-green">
+      <div class="label">Opens This Week</div>
+      <div class="value">{{ usage_totals.events_this_week }}</div>
+      <div class="sub">&nbsp;</div>
+    </div>
+
+    {% for p in platform_devices %}
+    <div class="stat-card card-gray">
+      <div class="label">{% if p.platform == 'ios' %}iOS{% else %}{{ p.platform|title }}{% endif %} Devices</div>
+      <div class="value">{{ p.devices }}</div>
+      <div class="sub">{{ p.events }} open{{ p.events|pluralize }}</div>
+    </div>
+    {% endfor %}
+
+  </div>
+
+  <div class="chart-row">
+
+    <div class="chart-card">
+      <h3>App opens by platform — last 30 days</h3>
+      <canvas id="chartUsage"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <h3>Devices by Platform</h3>
+      <canvas id="chartPlatform" style="max-height:220px;"></canvas>
+    </div>
+
+  </div>
+
+  <div class="db-table-wrap">
+    <h3>Recent Usage Events</h3>
+    <table class="db-table">
+      <thead>
+        <tr>
+          <th>Platform</th>
+          <th>Device</th>
+          <th>App Version</th>
+          <th>Route</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in recent_usage_events %}
+        <tr>
+          <td><span class="badge" style="background:#e0f2fe;color:#075985">{{ e.platform }}</span></td>
+          <td style="font-family:monospace;font-size:.75rem;color:#6b7280">{{ e.device_id|truncatechars:16 }}</td>
+          <td>{{ e.app_version|default:"—" }}</td>
+          <td style="color:#6b7280">{{ e.route|default:"—" }}</td>
+          <td style="color:#9ca3af;white-space:nowrap;font-size:.72rem">{{ e.created_at|date:"d M, H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" style="color:#9ca3af;padding:1rem">No usage events reported yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- ── Upcoming events ──────────────────────────────────────────────── -->
+  <div class="section-head">Upcoming Confirmed Events</div>
+  <div class="db-table-wrap">
+    <table class="db-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Customer</th>
+          <th>Service</th>
+          <th>Event Date</th>
+          <th>Guests</th>
+          <th style="text-align:right">Amount</th>
+          <th style="text-align:right">Advance</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in upcoming %}
+        <tr>
+          <td>
+            <a href="{% url 'admin:bookings_booking_change' b.pk %}" style="color:#2563eb;text-decoration:none">#{{ b.pk }}</a>
+          </td>
+          <td>{{ b.customer_name }}</td>
+          <td>{{ b.service.name|truncatechars:28 }}</td>
+          <td><strong>{{ b.event_date|date:"D, d M Y" }}</strong></td>
+          <td>{{ b.guest_count }}</td>
+          <td style="text-align:right">₹{{ b.total_amount|floatformat:0 }}</td>
+          <td style="text-align:right;color:#059669">₹{{ b.advance_amount|floatformat:0 }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" style="color:#9ca3af;padding:1rem">No upcoming confirmed events.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Recent bookings + Audit log ─────────────────────────────────── -->
+  <div class="section-head">Recent Activity</div>
+  <div class="bottom-row">
+
+    <!-- Recent bookings -->
+    <div class="db-table-wrap">
+      <h3>Recent Bookings</h3>
+      <table class="db-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Customer</th>
+            <th>Service</th>
+            <th>Status</th>
+            <th style="text-align:right">Amount</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in recent_bookings %}
+          <tr>
+            <td>
+              <a href="{% url 'admin:bookings_booking_change' b.pk %}" style="color:#2563eb;text-decoration:none">#{{ b.pk }}</a>
+            </td>
+            <td>{{ b.customer_name|truncatechars:22 }}</td>
+            <td style="color:#6b7280">{{ b.service.name|truncatechars:22 }}</td>
+            <td>
+              <span class="badge badge-{{ b.status }}">{{ b.get_status_display }}</span>
+            </td>
+            <td style="text-align:right">₹{{ b.total_amount|floatformat:0 }}</td>
+            <td style="color:#9ca3af;white-space:nowrap">{{ b.created_at|date:"d M, H:i" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" style="color:#9ca3af;padding:1rem">No bookings yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Audit log -->
+    <div class="db-table-wrap">
+      <h3>Audit Log</h3>
+      <table class="db-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Action</th>
+            <th>Object</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in audit_log %}
+          <tr>
+            <td style="font-weight:600">{{ entry.user.username }}</td>
+            <td>
+              {% if entry.is_addition %}
+                <span class="badge" style="background:#d1fae5;color:#065f46">+ Added</span>
+              {% elif entry.is_change %}
+                <span class="badge" style="background:#dbeafe;color:#1e40af">✎ Changed</span>
+              {% elif entry.is_deletion %}
+                <span class="badge" style="background:#fee2e2;color:#991b1b">✕ Deleted</span>
+              {% endif %}
+            </td>
+            <td style="color:#6b7280">
+              <span title="{{ entry.change_message }}">
+                {{ entry.content_type.model|title }}: {{ entry.object_repr|truncatechars:20 }}
+              </span>
+            </td>
+            <td style="color:#9ca3af;white-space:nowrap;font-size:.72rem">{{ entry.action_time|date:"d M, H:i" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" style="color:#9ca3af;padding:1rem">No audit entries yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+</div><!-- /#dashboard -->
+
+<!-- ── Charts JS ─────────────────────────────────────────────────────── -->
+<script>
+(function () {
+  const dailyLabels  = {{ daily_labels_json|safe }};
+  const dailyData    = {{ daily_data_json|safe }};
+  const revLabels    = {{ rev_labels_json|safe }};
+  const revTotal     = {{ rev_total_json|safe }};
+  const revAdvance   = {{ rev_advance_json|safe }};
+  const usageLabels     = {{ usage_labels_json|safe }};
+  const usageWeb        = {{ usage_web_json|safe }};
+  const usageAndroid    = {{ usage_android_json|safe }};
+  const usageIos        = {{ usage_ios_json|safe }};
+  const platformLabels  = {{ platform_labels_json|safe }};
+  const platformDevices = {{ platform_devices_json|safe }};
+
+  if (document.getElementById('chartUsage')) {
+    new Chart(document.getElementById('chartUsage'), {
+      type: 'line',
+      data: {
+        labels: usageLabels,
+        datasets: [
+          { label: 'Web', data: usageWeb, borderColor: '#0284c7', backgroundColor: 'rgba(2,132,199,.1)', borderWidth: 2, pointRadius: 0, fill: true, tension: .3 },
+          { label: 'Android', data: usageAndroid, borderColor: '#16a34a', backgroundColor: 'rgba(22,163,74,.1)', borderWidth: 2, pointRadius: 0, fill: true, tension: .3 },
+          { label: 'iOS', data: usageIos, borderColor: '#6b7280', backgroundColor: 'rgba(107,114,128,.1)', borderWidth: 2, pointRadius: 0, fill: true, tension: .3 },
+        ]
+      },
+      options: {
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 12 } } },
+        scales: {
+          x: { ticks: { maxTicksLimit: 8, font: { size: 10 } } },
+          y: { beginAtZero: true, ticks: { precision: 0, font: { size: 10 } } },
+        },
+      }
+    });
+  }
+
+  if (document.getElementById('chartPlatform')) {
+    new Chart(document.getElementById('chartPlatform'), {
+      type: 'doughnut',
+      data: {
+        labels: platformLabels,
+        datasets: [{
+          data: platformDevices,
+          backgroundColor: ['#0284c7', '#16a34a', '#6b7280', '#d97706'],
+          borderWidth: 0,
+        }]
+      },
+      options: {
+        cutout: '65%',
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 12 } } },
+      }
+    });
+  }
+
+  // Daily bookings line chart
+  new Chart(document.getElementById('chartDaily'), {
+    type: 'line',
+    data: {
+      labels: dailyLabels,
+      datasets: [{
+        label: 'Bookings',
+        data: dailyData,
+        borderColor: '#2563eb',
+        backgroundColor: 'rgba(37,99,235,.1)',
+        borderWidth: 2,
+        pointRadius: 2,
+        fill: true,
+        tension: .3,
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { maxTicksLimit: 8, font: { size: 10 } } },
+        y: { beginAtZero: true, ticks: { precision: 0, font: { size: 10 } } },
+      },
+    }
+  });
+
+  // Monthly revenue bar chart
+  new Chart(document.getElementById('chartRevenue'), {
+    type: 'bar',
+    data: {
+      labels: revLabels,
+      datasets: [
+        {
+          label: 'Total Value',
+          data: revTotal,
+          backgroundColor: 'rgba(37,99,235,.7)',
+          borderRadius: 4,
+        },
+        {
+          label: 'Advance Collected',
+          data: revAdvance,
+          backgroundColor: 'rgba(5,150,105,.6)',
+          borderRadius: 4,
+        },
+      ]
+    },
+    options: {
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } },
+      scales: {
+        x: { ticks: { font: { size: 10 } } },
+        y: { beginAtZero: true, ticks: { font: { size: 10 } } },
+      },
+    }
+  });
+
+  // Booking status doughnut
+  new Chart(document.getElementById('chartStatus'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Pending', 'Confirmed', 'Completed', 'Cancelled'],
+      datasets: [{
+        data: [{{ pending }}, {{ confirmed }}, {{ completed }}, {{ cancelled }}],
+        backgroundColor: ['#fbbf24','#34d399','#60a5fa','#f87171'],
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      cutout: '65%',
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 12 } }
+      },
+    }
+  });
+})();
+</script>
+{% endblock %}

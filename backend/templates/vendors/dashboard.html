@@ -1,0 +1,129 @@
+{% extends "vendors/base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-speedometer2 me-2 text-primary"></i>Dashboard</h1>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card card-blue">
+      <div class="label">Active Listings</div>
+      <div class="value">{{ services.count }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card card-orange">
+      <div class="label">Pending Bookings</div>
+      <div class="value">{{ pending_count }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card card-green">
+      <div class="label">Confirmed Bookings</div>
+      <div class="value">{{ confirmed_count }}</div>
+    </div>
+  </div>
+</div>
+
+{% if service_stats %}
+<div class="v-table-wrap mb-4">
+  <div class="v-table-head"><i class="bi bi-shop me-1"></i> Your Listings</div>
+  <table class="v-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Base Price</th>
+        <th class="text-center">Views</th>
+        <th class="text-center">Bookings</th>
+        <th class="text-center">Pending</th>
+        <th class="text-center">Confirmed</th>
+        <th class="text-center">Cancelled</th>
+        <th class="text-center">Completed</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in service_stats %}
+      <tr>
+        <td class="fw-500">{{ row.service.name }}</td>
+        <td>{{ row.service.currency_symbol }}{{ row.service.base_price }} <small class="text-muted">{{ row.service.price_unit }}</small></td>
+        <td class="text-center">{{ row.view_count }}</td>
+        <td class="text-center">{{ row.total_bookings }}</td>
+        <td class="text-center">{{ row.pending }}</td>
+        <td class="text-center">{{ row.confirmed }}</td>
+        <td class="text-center">{{ row.cancelled }}</td>
+        <td class="text-center">{{ row.completed }}</td>
+        <td class="text-nowrap">
+          <a href="{% url 'vendor_bookings' %}?service={{ row.service.id }}" class="btn btn-sm btn-outline-secondary">
+            Bookings
+          </a>
+          {% if role == 'owner' %}
+          <a href="{% url 'vendor_edit_service' row.service.id %}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-pencil"></i> Edit
+          </a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if recent_bookings %}
+<div class="v-table-wrap">
+  <div class="v-table-head d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-clock-history me-1"></i> Recent Bookings</span>
+    <a href="{% url 'vendor_bookings' %}" class="btn btn-sm btn-outline-primary">View all</a>
+  </div>
+  <table class="v-table">
+    <thead>
+      <tr>
+        <th>Ref</th>
+        <th>Customer</th>
+        <th>Service</th>
+        <th>Date</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for booking in recent_bookings %}
+      <tr>
+        <td class="font-monospace text-muted small">{{ booking.confirmation_number }}</td>
+        <td>{{ booking.customer_name }}</td>
+        <td>{{ booking.service.name }}</td>
+        <td>{{ booking.event_date|date:"d M Y" }}</td>
+        <td>
+          <span class="status-badge badge-{{ booking.status }}">{{ booking.get_status_display }}</span>
+        </td>
+        <td class="text-nowrap">
+          {% if booking.status == 'pending' %}
+          <form method="post" action="{% url 'vendor_approve_booking' booking.id %}" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'vendor_dashboard' %}">
+            <button type="submit" class="btn btn-success btn-sm">
+              <i class="bi bi-check-lg"></i> Approve
+            </button>
+          </form>
+          {% endif %}
+          <a href="{% url 'vendor_booking_detail' booking.id %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-eye"></i>
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="text-center text-muted py-5">
+  <i class="bi bi-calendar3 display-4 d-block mb-2"></i>
+  No bookings yet.
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,97 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Cancel Bookings with Refund{% endblock %}
+
+{% block content %}
+<h1>Cancel Bookings &amp; Issue Refund</h1>
+
+<p>You are about to cancel <strong>{{ bookings|length }} booking(s)</strong>. Please fill in the cancellation details below. An email will be sent to each customer.</p>
+
+<form method="post">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="cancel_with_refund">
+  {% for b in bookings %}
+  <input type="hidden" name="_selected_action" value="{{ b.pk }}">
+  {% endfor %}
+  <input type="hidden" name="confirmed" value="1">
+
+  <fieldset class="module aligned">
+    <h2>Refund Details</h2>
+
+    <div class="form-row">
+      <div class="field-box">
+        <label for="id_refund_type"><strong>Refund Type:</strong></label>
+        <select name="refund_type" id="id_refund_type" style="min-width:200px">
+          <option value="none">❌ No Refund</option>
+          <option value="partial">⚠️ Partial Refund</option>
+          <option value="full">✅ Full Refund</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row" id="refund_amount_row" style="display:none">
+      <div class="field-box">
+        <label for="id_refund_amount"><strong>Refund Amount (₹):</strong></label>
+        <input type="number" name="refund_amount" id="id_refund_amount" step="0.01" min="0" style="width:160px">
+        <p class="help" style="color:#6b7280;font-size:12px">Enter the actual amount to be refunded. Leave blank for full refund of advance.</p>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="field-box">
+        <label for="id_cancellation_reason"><strong>Reason for Cancellation:</strong> <span style="color:#dc2626">*</span></label>
+        <textarea name="cancellation_reason" id="id_cancellation_reason" rows="4" style="width:100%;max-width:600px" required placeholder="This reason will be shown to the customer in their cancellation email."></textarea>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="field-box">
+        <label for="id_admin_notes"><strong>Internal Notes (optional):</strong></label>
+        <textarea name="admin_notes" id="id_admin_notes" rows="2" style="width:100%;max-width:600px" placeholder="Internal notes — not shown to the customer."></textarea>
+      </div>
+    </div>
+  </fieldset>
+
+  <div style="margin-top:20px">
+    <h2>Bookings to be cancelled</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr style="background:#f3f4f6">
+          <th style="padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb">#</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb">Customer</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb">Service</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb">Event Date</th>
+          <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #e5e7eb">Total</th>
+          <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #e5e7eb">Advance</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in bookings %}
+        <tr style="border-bottom:1px solid #f3f4f6">
+          <td style="padding:8px 12px">#{{ b.pk }}</td>
+          <td style="padding:8px 12px">{{ b.customer_name }}<br><span style="color:#6b7280;font-size:11px">{{ b.customer_email }}</span></td>
+          <td style="padding:8px 12px">{{ b.service.name }}</td>
+          <td style="padding:8px 12px">{{ b.event_date|date:"d M Y" }}</td>
+          <td style="padding:8px 12px;text-align:right">₹{{ b.total_amount|floatformat:0 }}</td>
+          <td style="padding:8px 12px;text-align:right">₹{{ b.advance_amount|floatformat:0 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div style="margin-top:24px;display:flex;gap:12px;align-items:center">
+    <input type="submit" value="Cancel Bookings &amp; Send Emails" class="button default"
+           style="background:#dc2626;color:#fff;border:none;padding:10px 24px;cursor:pointer;border-radius:4px;font-weight:700">
+    <a href="../" style="color:#6b7280">← Go back without cancelling</a>
+  </div>
+</form>
+
+<script>
+document.getElementById('id_refund_type').addEventListener('change', function() {
+  document.getElementById('refund_amount_row').style.display =
+    this.value === 'partial' ? 'block' : 'none';
+});
+</script>
+{% endblock %}

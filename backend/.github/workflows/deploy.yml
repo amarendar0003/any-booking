@@ -1,0 +1,147 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches: [main]
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-central1
+  SERVICE_NAME: any-booking
+  REGISTRY: us-central1-docker.pkg.dev
+  REPOSITORY: any-booking-repo          # Artifact Registry repo name
+  IMAGE: any-booking
+
+jobs:
+  # ── 1. Test ────────────────────────────────────────────────────────────────
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: anybooking_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Django checks & tests
+        env:
+          SECRET_KEY: ci-test-secret-key-not-used-in-production
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/anybooking_test
+          RAZORPAY_KEY_ID: test
+          RAZORPAY_KEY_SECRET: test
+          ALLOWED_HOSTS: localhost
+        run: |
+          python manage.py check
+          python manage.py collectstatic --noinput
+          python manage.py migrate --noinput
+          python manage.py test --verbosity=2
+
+  # ── 2. Build & Push Docker image ───────────────────────────────────────────
+  build:
+    name: Build & Push Image
+    runs-on: ubuntu-latest
+    needs: test
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+
+    permissions:
+      contents: read
+      id-token: write       # Required for Workload Identity Federation
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          token_format: access_token
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - name: Build and push image
+        id: image
+        run: |
+          IMAGE_TAG="${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${{ github.sha }}"
+          docker build -t "$IMAGE_TAG" .
+          docker push "$IMAGE_TAG"
+          echo "image=$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+  # ── 3. Deploy to Cloud Run ─────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Cloud Run
+    runs-on: ubuntu-latest
+    needs: build
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE_NAME }}
+          region: ${{ env.REGION }}
+          image: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${{ github.sha }}
+          env_vars: |
+            ALLOWED_HOSTS=${{ secrets.CLOUD_RUN_HOST }}
+          secrets: |
+            SECRET_KEY=DJANGO_SECRET_KEY:latest
+            DATABASE_URL=DATABASE_URL:latest
+            RAZORPAY_KEY_ID=RAZORPAY_KEY_ID:latest
+            RAZORPAY_KEY_SECRET=RAZORPAY_KEY_SECRET:latest
+            EMAIL_BACKEND=EMAIL_BACKEND:latest
+            EMAIL_HOST=EMAIL_HOST:latest
+            EMAIL_HOST_USER=EMAIL_HOST_USER:latest
+            EMAIL_HOST_PASSWORD=EMAIL_HOST_PASSWORD:latest
+            DEFAULT_FROM_EMAIL=DEFAULT_FROM_EMAIL:latest
+            ADMIN_NOTIFY_EMAIL=ADMIN_NOTIFY_EMAIL:latest
+            SITE_URL=SITE_URL:latest
+            GCS_MEDIA_BUCKET=GCS_MEDIA_BUCKET:latest
+          flags: >-
+            --add-cloudsql-instances=${{ secrets.CLOUD_SQL_INSTANCE }}
+            --min-instances=0
+            --max-instances=10
+            --memory=512Mi
+            --cpu=1
+            --concurrency=80
+            --timeout=120
+
+      - name: Show deployed URL
+        run: echo "Deployed to ${{ steps.deploy.outputs.url }}"

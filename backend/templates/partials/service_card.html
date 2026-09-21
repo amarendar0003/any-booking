@@ -1,0 +1,62 @@
+{% load static local_names %}
+<div class="service-card position-relative">
+  {% if service.is_featured %}
+    <span class="badge-featured">
+      <i class="bi bi-star-fill"></i> Featured
+    </span>
+  {% endif %}
+
+  {% with img=service.primary_image %}
+    {% if img %}
+      <img src="{{ img.image.url }}" class="card-img-top" alt="{{ service.name }}">
+    {% else %}
+      <img src="{% static 'img/AnyBookingMainLogo.jpg' %}" class="card-img-top service-default-image" alt="{{ service.name }}">
+    {% endif %}
+  {% endwith %}
+
+  <div class="card-body">
+    <div class="d-flex align-items-center gap-2 mb-2">
+      <span class="badge-category">{% service_cat_name service.category %}</span>
+      {% if service.city %}
+        <span class="text-muted" style="font-size:.75rem"><i class="bi bi-geo-alt"></i> {{ service.city.name }}</span>
+      {% endif %}
+    </div>
+
+    <h6 class="fw-bold mb-1" style="font-size:.92rem;color:#0f172a">{{ service.name }}</h6>
+    <p class="mb-2" style="font-size:.78rem;color:#64748b">{{ service.vendor.name }}</p>
+
+    <div class="mb-2">
+      {% for av in service.attribute_values.all|slice:":3" %}
+        {% if av.attribute.data_type == 'boolean' %}
+          <span class="attr-badge {% if av.value_boolean %}attr-yes{% else %}attr-no{% endif %}">
+            <i class="bi {% if av.value_boolean %}bi-check-circle{% else %}bi-x-circle{% endif %}"></i>
+            {{ av.attribute|local_attr_name:request }}
+          </span>
+        {% elif av.attribute.data_type == 'number' and av.value_number %}
+          <span class="attr-badge attr-num">
+            <i class="bi bi-people"></i> {{ av.value_number|floatformat:0 }}
+          </span>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    {% if service.avg_rating %}
+    <div class="mb-2" style="font-size:.8rem">
+      <span style="color:#f59e0b"><i class="bi bi-star-fill"></i> {{ service.avg_rating|floatformat:1 }}</span>
+      <span class="text-muted">({{ service.review_count }})</span>
+    </div>
+    {% endif %}
+
+    <div class="mt-auto d-flex align-items-center justify-content-between">
+      {% if service.base_price %}
+        <div>
+          <span class="service-price">{{ service.currency_symbol }}{{ service.base_price|floatformat:0 }}</span>
+          <span class="text-muted" style="font-size:.75rem"> / {{ service.price_unit }}</span>
+        </div>
+      {% else %}
+        <span class="text-muted" style="font-size:.8rem">Price on request</span>
+      {% endif %}
+      <a href="{% url 'service_detail' service.slug %}" class="btn-view">View →</a>
+    </div>
+  </div>
+</div>

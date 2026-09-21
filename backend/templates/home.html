@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+{% load static local_names %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+<div class="home-page">
+{# ── Hero ──────────────────────────────────────────────────────────────── #}
+<div class="hero">
+  <div class="hero-slides" aria-hidden="true">
+    <div class="hero-track">
+      <div class="hero-group">
+        <img src="{% static 'img/hero1.jpg' %}" alt="" class="hero-slide">
+        <img src="{% static 'img/hero11.jpg' %}" alt="" class="hero-slide">
+        <img src="{% static 'img/hero111.jpg' %}" alt="" class="hero-slide">
+        <img src="{% static 'img/Mandap1.jpg' %}" alt="" class="hero-slide">
+        <img src="{% static 'img/Mandap11.jpg' %}" alt="" class="hero-slide">
+      </div>
+      <div class="hero-group" aria-hidden="true">
+        <img src="{% static 'img/hero1.jpg' %}" alt="" class="hero-slide">
+        <img src="{% static 'img/hero11.jpg' %}" alt="" class="hero-slide">
+        <img src="{% static 'img/hero111.jpg' %}" alt="" class="hero-slide">
+        <img src="{% static 'img/Mandap1.jpg' %}" alt="" class="hero-slide">
+        <img src="{% static 'img/Mandap11.jpg' %}" alt="" class="hero-slide">
+      </div>
+    </div>
+  </div>
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">India's Premier Event Booking Platform</div>
+    <h1>Find &amp; Book the<br><span class="hero-accent">Perfect Venue</span></h1>
+    <p class="hero-sub">Banquet halls, music bands, catering, hotels &amp; more — across India and beyond</p>
+    <form method="get" action="{% url 'service_list' %}" class="hero-search">
+      <i class="bi bi-search text-muted"></i>
+      <input name="q" placeholder="Search venues, services, cities…" value="{{ request.GET.q }}" autocomplete="off">
+      <button type="submit">Search</button>
+    </form>
+    <div class="hero-stats">
+      <div>
+        <div class="hero-stat-num">500+</div>
+        <div class="hero-stat-label">Verified Vendors</div>
+      </div>
+      <div>
+        <div class="hero-stat-num">15+</div>
+        <div class="hero-stat-label">Service Categories</div>
+      </div>
+      <div>
+        <div class="hero-stat-num">50+</div>
+        <div class="hero-stat-label">Cities Covered</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Browse by Category ────────────────────────────────────────────────── #}
+<section class="container my-5">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h2 class="section-title mb-0">Browse by Category</h2>
+  </div>
+  <div class="cat-grid">
+    {% for cat in categories %}
+    <a href="{% url 'service_list_by_category' cat.slug %}" class="cat-tile">
+      <div class="cat-tile-bg
+        {% if cat.slug == 'banquet_hall' %}cat-bg-banquet
+        {% elif cat.slug == 'music_band' %}cat-bg-music
+        {% elif cat.slug == 'catering' %}cat-bg-catering
+        {% elif cat.slug == 'hotels' %}cat-bg-hotels
+        {% elif cat.slug == 'dancing' %}cat-bg-dancing
+        {% elif cat.slug == 'priests' %}cat-bg-priests
+        {% elif cat.slug == 'event_management' %}cat-bg-events
+        {% else %}cat-bg-default{% endif %}">
+        {% if cat.slug == 'banquet_hall' %}🏛️
+        {% elif cat.slug == 'music_band' %}🎸
+        {% elif cat.slug == 'catering' %}🍽️
+        {% elif cat.slug == 'hotels' %}🏨
+        {% elif cat.slug == 'dancing' %}💃
+        {% elif cat.slug == 'priests' %}🪔
+        {% elif cat.slug == 'event_management' %}🎪
+        {% else %}<i class="bi {{ cat.icon }} text-white"></i>{% endif %}
+      </div>
+      <div class="cat-tile-overlay">
+        <div class="cat-tile-name">{{ cat|local_cat_name:request }}</div>
+        <div class="cat-tile-count">{{ cat.filtered_count }} listing{{ cat.filtered_count|pluralize }}</div>
+      </div>
+    </a>
+    {% empty %}
+    <p class="text-muted">No categories configured yet. <a href="/admin/">Add via admin</a>.</p>
+    {% endfor %}
+    {% if categories %}
+    <a href="{% url 'service_list' %}" class="cat-tile-viewall">
+      <i class="bi bi-grid fs-4"></i>
+      <span>View All</span>
+    </a>
+    {% endif %}
+  </div>
+</section>
+
+{# ── Featured Listings ─────────────────────────────────────────────────── #}
+{% if featured %}
+<section class="container my-5">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h2 class="section-title mb-0">Featured Services</h2>
+    <a href="{% url 'service_list' %}" class="btn-view">View all →</a>
+  </div>
+  <div class="row g-4">
+    {% for svc in featured %}
+    <div class="col-sm-6 col-lg-4">
+      {% include 'partials/service_card.html' with service=svc %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{# ── Explore by City ───────────────────────────────────────────────────── #}
+{% if featured_cities %}
+<div class="city-strip">
+  <div class="container">
+    <h2 class="section-title mb-4">Explore by City</h2>
+    <div class="city-grid">
+      {% for city in featured_cities %}
+      <a href="{% url 'service_list' %}?city={{ city.id }}" class="city-card">
+        {% if city.image %}
+          <img src="{{ city.image.url }}" alt="{{ city.name }}" class="city-card-bg">
+        {% else %}
+          <div class="city-card-bg"></div>
+        {% endif %}
+        <div class="city-card-overlay">
+          <span class="city-card-name">{{ city.name }}</span>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Benefits strip ────────────────────────────────────────────────────── #}
+<div class="benefit-strip">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-md-3 benefit">
+        <div class="benefit-icon-box"><i class="bi bi-patch-check-fill"></i></div>
+        <h5>Verified Vendors</h5>
+        <p>Every vendor is reviewed before going live</p>
+      </div>
+      <div class="col-md-3 benefit">
+        <div class="benefit-icon-box"><i class="bi bi-shield-lock-fill"></i></div>
+        <h5>Secure Payments</h5>
+        <p>Razorpay-backed advance — safe &amp; instant</p>
+      </div>
+      <div class="col-md-3 benefit">
+        <div class="benefit-icon-box"><i class="bi bi-calendar2-check-fill"></i></div>
+        <h5>Real Availability</h5>
+        <p>Live calendar — no double-bookings, ever</p>
+      </div>
+      <div class="col-md-3 benefit">
+        <div class="benefit-icon-box"><i class="bi bi-headset"></i></div>
+        <h5>Dedicated Support</h5>
+        <p>We're with you from browse to event day</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+{% endblock %}

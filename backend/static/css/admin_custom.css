@@ -1,0 +1,12 @@
+/* Make changelist tables horizontally scrollable on narrow viewports */
+#changelist .results {
+    overflow-x: auto;
+}
+#changelist table {
+    min-width: max-content;
+}
+
+/* Prevent service/name cells from wrapping in list views */
+#changelist table td a {
+    white-space: nowrap;
+}

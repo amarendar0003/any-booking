@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block title %}Booking Confirmed — #{{ booking.pk }}{% endblock %}
+
+{% block content %}
+<div class="container my-5" style="max-width:680px">
+  <div class="card border-0 shadow rounded-4 p-4 p-md-5 text-center">
+    {% if booking.status == 'confirmed' %}
+      <div class="display-3 text-success mb-3"><i class="bi bi-check-circle-fill"></i></div>
+      <h2 class="fw-bold">Booking Confirmed!</h2>
+      <p class="text-muted">Your payment was received and the booking is confirmed.</p>
+    {% else %}
+      <div class="display-3 text-warning mb-3"><i class="bi bi-clock-fill"></i></div>
+      <h2 class="fw-bold">Booking Requested!</h2>
+      <p class="text-muted">Your request is pending. Our team will contact you within 24 hours.</p>
+    {% endif %}
+
+    <div class="bg-primary bg-opacity-10 rounded-3 px-4 py-3 mb-3 text-center">
+      <div class="text-muted small mb-1">Your Confirmation Number</div>
+      <div class="fw-bold text-primary" style="font-size:1.5rem;font-family:monospace;letter-spacing:.08em">
+        {{ booking.confirmation_number }}
+      </div>
+      <div class="text-muted small mt-1">Use this to find or reference your booking</div>
+    </div>
+
+    <div class="card bg-light border-0 rounded-3 p-3 text-start my-4">
+      <div class="row g-2 small">
+        <div class="col-6 text-muted">Booking ID</div>
+        <div class="col-6 fw-semibold">#{{ booking.pk }}</div>
+
+        <div class="col-6 text-muted">Service</div>
+        <div class="col-6 fw-semibold">{{ booking.service.name }}</div>
+
+        {% if booking.service.city %}
+        <div class="col-6 text-muted">Location</div>
+        <div class="col-6">{{ booking.service.city.name }}, {{ booking.service.city.state.name }}</div>
+        {% endif %}
+
+        <div class="col-6 text-muted">Customer</div>
+        <div class="col-6">{{ booking.customer_name }}</div>
+
+        <div class="col-6 text-muted">Phone</div>
+        <div class="col-6">{{ booking.customer_phone }}</div>
+
+        <div class="col-6 text-muted">Event Date</div>
+        <div class="col-6">{{ booking.event_date }}</div>
+
+        {% if booking.event_end_date %}
+        <div class="col-6 text-muted">End Date</div>
+        <div class="col-6">{{ booking.event_end_date }}</div>
+        {% endif %}
+
+        <div class="col-6 text-muted">Guests</div>
+        <div class="col-6">{{ booking.guest_count }}</div>
+
+        <div class="col-6 text-muted">Total Amount</div>
+        <div class="col-6 fw-semibold text-primary">
+          {{ booking.service.currency_symbol }}{{ booking.total_amount|floatformat:0 }}
+        </div>
+
+        {% if booking.advance_amount %}
+        <div class="col-6 text-muted">Advance Paid</div>
+        <div class="col-6 text-success fw-semibold">
+          {{ booking.service.currency_symbol }}{{ booking.advance_amount|floatformat:0 }}
+        </div>
+        <div class="col-6 text-muted">Balance Due</div>
+        <div class="col-6">{{ booking.service.currency_symbol }}{{ booking.balance_amount|floatformat:0 }}</div>
+        {% endif %}
+
+        <div class="col-6 text-muted">Status</div>
+        <div class="col-6">
+          <span class="badge
+            {% if booking.status == 'confirmed' %}bg-success
+            {% elif booking.status == 'pending' %}bg-warning text-dark
+            {% else %}bg-secondary{% endif %}">
+            {{ booking.get_status_display }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    {% if booking.status == 'pending' and booking.service.base_price %}
+    <a href="{% url 'initiate_payment' booking.pk %}" class="btn btn-primary btn-lg mb-3">
+      <i class="bi bi-credit-card"></i> Pay Advance Now
+    </a>
+    {% endif %}
+
+    <a href="{% url 'service_list' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> Browse More Services
+    </a>
+    <div class="mt-3">
+      <a href="{% url 'booking_lookup' %}" class="text-muted small">
+        <i class="bi bi-search"></i> Find My Booking
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

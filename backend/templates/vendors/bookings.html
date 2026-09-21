@@ -1,0 +1,115 @@
+{% extends "vendors/base.html" %}
+
+{% block title %}Bookings{% endblock %}
+{% block nav_bookings %}active{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-calendar3 me-2 text-primary"></i>Bookings</h1>
+</div>
+
+<div class="bg-white border rounded-3 p-3 mb-4">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-12 col-md-4">
+      <label class="form-label small fw-500 mb-1">Service</label>
+      <select name="service" class="form-select form-select-sm">
+        <option value="">All services</option>
+        {% for svc in services %}
+        <option value="{{ svc.id }}" {% if selected_service == svc.id|stringformat:"s" %}selected{% endif %}>
+          {{ svc.name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-3">
+      <label class="form-label small fw-500 mb-1">Status</label>
+      <select name="status" class="form-select form-select-sm">
+        <option value="">All statuses</option>
+        {% for val, label in status_choices %}
+        <option value="{{ val }}" {% if selected_status == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+      {% if selected_status or selected_service %}
+      <a href="{% url 'vendor_bookings' %}" class="btn btn-outline-secondary btn-sm ms-1">Clear</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="v-table-wrap">
+  <div class="v-table-head">
+    {{ bookings.count }} booking{{ bookings.count|pluralize }}
+    {% if selected_status or selected_service %}(filtered){% endif %}
+  </div>
+  {% if bookings %}
+  <table class="v-table">
+    <thead>
+      <tr>
+        <th>Ref</th>
+        <th>Customer</th>
+        <th>Phone</th>
+        <th>Service</th>
+        <th>Event Date</th>
+        <th>Guests</th>
+        <th>Total</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for booking in bookings %}
+      <tr>
+        <td class="font-monospace text-muted small">{{ booking.confirmation_number }}</td>
+        <td>
+          <div class="fw-500">{{ booking.customer_name }}</div>
+          <div class="text-muted small">{{ booking.customer_email }}</div>
+        </td>
+        <td class="small">{{ booking.customer_phone }}</td>
+        <td>{{ booking.service.name }}</td>
+        <td class="small">
+          {{ booking.event_date|date:"d M Y" }}
+          {% if booking.event_end_date %}<br><span class="text-muted">to {{ booking.event_end_date|date:"d M Y" }}</span>{% endif %}
+          {% if booking.event_time %}<br><span class="text-muted">{{ booking.event_time|time:"H:i" }}</span>{% endif %}
+        </td>
+        <td class="text-center">{{ booking.guest_count }}</td>
+        <td class="small">
+          {{ booking.service.currency_symbol }}{{ booking.total_amount }}
+          {% if booking.advance_amount %}
+          <br><span class="text-muted">Adv: {{ booking.service.currency_symbol }}{{ booking.advance_amount }}</span>
+          {% endif %}
+        </td>
+        <td>
+          <span class="status-badge badge-{{ booking.status }}">{{ booking.get_status_display }}</span>
+          {% if booking.cancellation_requested %}
+          <br><span class="text-danger small"><i class="bi bi-exclamation-circle"></i> Cancel requested</span>
+          {% endif %}
+        </td>
+        <td class="text-nowrap">
+          {% if booking.status == 'pending' %}
+          <form method="post" action="{% url 'vendor_approve_booking' booking.id %}" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" class="btn btn-success btn-sm">
+              <i class="bi bi-check-lg"></i> Approve
+            </button>
+          </form>
+          {% endif %}
+          <a href="{% url 'vendor_booking_detail' booking.id %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-eye"></i> Details
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="text-center text-muted py-5">
+    <i class="bi bi-calendar3 display-4 d-block mb-2"></i>
+    No bookings found.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

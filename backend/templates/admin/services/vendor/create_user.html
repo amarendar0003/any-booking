@@ -1,0 +1,60 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Create portal login — {{ vendor.name }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 520px;">
+  <div style="margin-bottom: 1.5rem;">
+    <h1 style="font-size: 1.4rem; margin: 0 0 .3rem;">
+      Create portal login
+    </h1>
+    <p style="color: #6b7280; margin: 0;">
+      Vendor: <strong>{{ vendor.name }}</strong>
+    </p>
+  </div>
+
+  {% if error %}
+  <div style="background: #fee2e2; border: 1px solid #fca5a5; border-radius: 6px;
+              padding: .75rem 1rem; margin-bottom: 1rem; color: #991b1b;">
+    {{ error }}
+  </div>
+  {% endif %}
+
+  <form method="post"
+        style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.5rem;">
+    {% csrf_token %}
+    <div style="margin-bottom: 1rem;">
+      <label style="display: block; font-size: .85rem; font-weight: 600; margin-bottom: .3rem;">
+        Username
+      </label>
+      <input type="text" name="username" autofocus required
+             value="{{ request.POST.username|default:'' }}"
+             style="width: 100%; padding: .5rem .75rem; border: 1px solid #d1d5db;
+                    border-radius: 6px; font-size: .9rem; box-sizing: border-box;">
+    </div>
+    <div style="margin-bottom: 1.5rem;">
+      <label style="display: block; font-size: .85rem; font-weight: 600; margin-bottom: .3rem;">
+        Password
+      </label>
+      <input type="password" name="password" required
+             style="width: 100%; padding: .5rem .75rem; border: 1px solid #d1d5db;
+                    border-radius: 6px; font-size: .9rem; box-sizing: border-box;">
+      <p style="color: #6b7280; font-size: .8rem; margin: .4rem 0 0;">
+        The vendor will use these credentials to log in at <code>/vendor/login/</code>.
+      </p>
+    </div>
+    <div style="display: flex; gap: .75rem; align-items: center;">
+      <button type="submit"
+              style="background: #1a56db; color: #fff; border: none; border-radius: 6px;
+                     padding: .55rem 1.25rem; font-size: .9rem; font-weight: 600; cursor: pointer;">
+        Create account
+      </button>
+      <a href="{% url 'admin:services_vendor_change' vendor.pk %}"
+         style="color: #6b7280; font-size: .88rem; text-decoration: none;">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}

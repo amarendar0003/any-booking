@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% load static local_names %}
+{% block title %}{% if category %}{{ category|local_cat_name:request }}{% else %}All Services{% endif %}{% endblock %}
+
+{% block content %}
+
+{# ── Page header ───────────────────────────────────────────────────────── #}
+<div class="list-header">
+  <div class="container">
+    <nav aria-label="breadcrumb" class="mb-2">
+      <ol class="breadcrumb mb-0" style="font-size:.8rem">
+        <li class="breadcrumb-item"><a href="{% url 'home' %}" style="color:#7dd3fc;text-decoration:none">Home</a></li>
+        {% if category %}
+          <li class="breadcrumb-item"><a href="{% url 'service_list' %}" style="color:#7dd3fc;text-decoration:none">Services</a></li>
+          <li class="breadcrumb-item active" style="color:rgba(255,255,255,.65)">{{ category|local_cat_name:request }}</li>
+        {% else %}
+          <li class="breadcrumb-item active" style="color:rgba(255,255,255,.65)">All Services</li>
+        {% endif %}
+      </ol>
+    </nav>
+    <h1>
+      {% if category %}
+        {% if category.slug == 'banquet_hall' %}🏛️
+        {% elif category.slug == 'music_band' %}🎸
+        {% elif category.slug == 'catering' %}🍽️
+        {% elif category.slug == 'hotels' %}🏨
+        {% elif category.slug == 'dancing' %}💃
+        {% elif category.slug == 'priests' %}🪔
+        {% elif category.slug == 'event_management' %}🎪
+        {% endif %}
+        {{ category|local_cat_name:request }}
+      {% else %}
+        All Services
+      {% endif %}
+    </h1>
+    <p class="list-sub mb-0">{{ services.count }} result{{ services.count|pluralize }} found</p>
+  </div>
+</div>
+
+{# ── Search strip ──────────────────────────────────────────────────────── #}
+<div class="search-strip">
+  <div class="container">
+    <form method="get" id="filter-form" class="d-flex flex-wrap gap-2 align-items-center">
+      {% if category %}<input type="hidden" name="category" value="{{ category.slug }}">{% endif %}
+      <input name="q" class="form-control" style="max-width:220px" placeholder="Search…" value="{{ q }}">
+      <select name="district" id="f-district" class="form-select" style="max-width:160px" onchange="filterCities(this.value)">
+        <option value="">All Districts</option>
+        {% for d in districts %}
+        <option value="{{ d.id }}" {% if selected_district == d.id|stringformat:"s" %}selected{% endif %}>{{ d.name }}</option>
+        {% endfor %}
+      </select>
+      <select name="city" id="f-city" class="form-select" style="max-width:160px">
+        <option value="">All Cities</option>
+        {% for c in cities %}
+        <option value="{{ c.id }}" {% if selected_city == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+      {% if category and category.slug == 'banquet_hall' %}
+      <select name="hall_type" class="form-select" style="max-width:140px">
+        <option value="">Any Type</option>
+        <option value="ac" {% if hall_type == 'ac' %}selected{% endif %}>AC Hall</option>
+        <option value="non_ac" {% if hall_type == 'non_ac' %}selected{% endif %}>Non AC</option>
+      </select>
+      {% endif %}
+      <select name="sort" class="form-select" style="max-width:160px">
+        <option value="">Relevance</option>
+        <option value="price_asc" {% if sort == 'price_asc' %}selected{% endif %}>Price ↑</option>
+        <option value="price_desc" {% if sort == 'price_desc' %}selected{% endif %}>Price ↓</option>
+      </select>
+      <button type="submit" class="btn-apply" style="width:auto;padding:7px 18px">Apply</button>
+      <a href="{% if category %}{% url 'service_list_by_category' category.slug %}{% else %}{% url 'service_list' %}{% endif %}"
+         class="btn btn-link btn-sm text-muted p-0">Clear</a>
+    </form>
+  </div>
+</div>
+
+{# ── Main layout ───────────────────────────────────────────────────────── #}
+<div class="container my-4">
+  <div class="d-flex gap-4 align-items-start">
+
+    {# Sidebar #}
+    <div class="filter-sidebar d-none d-lg-block" style="width:230px;flex-shrink:0">
+
+      {# Categories pill list #}
+      <div class="sidebar-card">
+        <h6>Categories</h6>
+        <a href="{% url 'service_list' %}"
+           class="cat-pill {% if not category %}active{% endif %}">
+          All
+          <span class="count-badge">{{ services.count }}</span>
+        </a>
+        {% for cat in categories %}
+        <a href="{% url 'service_list_by_category' cat.slug %}"
+           class="cat-pill {% if category and category.slug == cat.slug %}active{% endif %}">
+          {{ cat|local_cat_name:request }}
+          <span class="count-badge">{{ cat.filtered_count }}</span>
+        </a>
+        {% endfor %}
+      </div>
+
+      {# Capacity filter (banquet hall only) #}
+      {% if category and category.slug == 'banquet_hall' %}
+      <div class="sidebar-card">
+        <h6>Capacity</h6>
+        <form method="get">
+          {% if category %}<input type="hidden" name="category" value="{{ category.slug }}">{% endif %}
+          <input type="hidden" name="q" value="{{ q }}">
+          {% if selected_district %}<input type="hidden" name="district" value="{{ selected_district }}">{% endif %}
+          {% if selected_city %}<input type="hidden" name="city" value="{{ selected_city }}">{% endif %}
+          {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+          {% if hall_type %}<input type="hidden" name="hall_type" value="{{ hall_type }}">{% endif %}
+          <div class="d-flex gap-2 mb-2">
+            <input type="number" name="min_capacity" class="form-control form-control-sm"
+                   placeholder="Min" value="{{ min_capacity }}" style="border:1.5px solid #e2e8f0;border-radius:9px">
+          </div>
+          <button type="submit" class="btn-apply">Apply</button>
+        </form>
+      </div>
+      {% endif %}
+
+    </div>
+
+    {# Results #}
+    <div style="flex:1;min-width:0">
+      {% if services %}
+      <div class="list-card-grid">
+        {% for svc in services %}
+        <div class="list-card position-relative">
+          {% if svc.is_featured %}
+            <span class="badge-featured">⭐ Featured</span>
+          {% endif %}
+
+          {% with img=svc.primary_image %}
+            {% if img %}
+              <img src="{{ img.image.url }}" class="card-img" alt="{{ svc.name }}">
+            {% else %}
+              <img src="{% static 'img/AnyBookingMainLogo.jpg' %}" class="card-img service-default-image" alt="{{ svc.name }}">
+            {% endif %}
+          {% endwith %}
+
+          <div class="card-body">
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <span class="badge-category">{{ svc.category|local_cat_name:request }}</span>
+              {% if svc.city %}
+                <span class="text-muted" style="font-size:.73rem"><i class="bi bi-geo-alt"></i> {{ svc.city.name }}</span>
+              {% endif %}
+            </div>
+            <h6 class="fw-bold mb-1" style="font-size:.9rem;color:#0f172a">{{ svc.name }}</h6>
+            <p class="mb-2" style="font-size:.77rem;color:#64748b">{{ svc.vendor.name }}</p>
+
+            <div class="mb-2">
+              {% for av in svc.attribute_values.all|slice:":3" %}
+                {% if av.attribute.data_type == 'boolean' %}
+                  <span class="attr-badge {% if av.value_boolean %}attr-yes{% else %}attr-no{% endif %}">
+                    <i class="bi {% if av.value_boolean %}bi-check-circle{% else %}bi-x-circle{% endif %}"></i>
+                    {{ av.attribute|local_attr_name:request }}
+                  </span>
+                {% elif av.attribute.data_type == 'number' and av.value_number %}
+                  <span class="attr-badge attr-num">
+                    <i class="bi bi-people"></i> {{ av.value_number|floatformat:0 }}
+                  </span>
+                {% endif %}
+              {% endfor %}
+            </div>
+
+            {% if svc.avg_rating %}
+            <div class="mb-2" style="font-size:.78rem">
+              <span style="color:#f59e0b"><i class="bi bi-star-fill"></i> {{ svc.avg_rating|floatformat:1 }}</span>
+              <span class="text-muted">({{ svc.review_count }})</span>
+            </div>
+            {% endif %}
+
+            <div class="mt-auto d-flex align-items-center justify-content-between">
+              {% if svc.base_price %}
+                <div>
+                  <span class="service-price">{{ svc.currency_symbol }}{{ svc.base_price|floatformat:0 }}</span>
+                  <span class="text-muted" style="font-size:.73rem"> / {{ svc.price_unit }}</span>
+                </div>
+              {% else %}
+                <span class="text-muted" style="font-size:.8rem">Price on request</span>
+              {% endif %}
+              <a href="{% url 'service_detail' svc.slug %}" class="btn-view">View →</a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-search display-4 d-block mb-3"></i>
+        <h5>No services found</h5>
+        <p>Try adjusting your filters or <a href="{% url 'service_list' %}">view all services</a>.</p>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const ajaxUrl = "{% url 'location_ajax' %}";
+async function loadOpts(kind, parentId, targetId, label) {
+  const sel = document.getElementById(targetId);
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">All ${label}</option>`;
+  if (!parentId) return;
+  const r = await fetch(`${ajaxUrl}?kind=${kind}&parent_id=${parentId}`);
+  const d = await r.json();
+  d.results.forEach(i => {
+    sel.innerHTML += `<option value="${i.id}" ${i.id == cur ? 'selected' : ''}>${i.name}</option>`;
+  });
+}
+function filterCities(id) { loadOpts('cities', id, 'f-city', 'Cities'); }
+</script>
+{% endblock %}

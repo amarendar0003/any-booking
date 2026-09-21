@@ -1,0 +1,16 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+__pycache__
+*.py[cod]
+*.pyo
+db.sqlite3
+staticfiles/
+media/
+.DS_Store
+.vscode/
+.idea/
+*.log
+node_modules/

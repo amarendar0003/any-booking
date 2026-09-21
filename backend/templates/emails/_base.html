@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  body{margin:0;padding:0;background:#f4f6f9;font-family:Arial,Helvetica,sans-serif;color:#333}
+  .wrap{max-width:600px;margin:32px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+  .header{background:#2563eb;padding:28px 32px;text-align:center}
+  .header h1{margin:0;color:#fff;font-size:22px;letter-spacing:.5px}
+  .header p{margin:6px 0 0;color:#bfdbfe;font-size:13px}
+  .body{padding:32px}
+  .greeting{font-size:16px;margin-bottom:20px}
+  .card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:20px;margin:20px 0}
+  .card-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e2e8f0;font-size:14px}
+  .card-row:last-child{border-bottom:none}
+  .card-row .label{color:#64748b;font-weight:600}
+  .card-row .value{color:#1e293b;text-align:right}
+  .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700}
+  .badge-pending {background:#fef3c7;color:#92400e}
+  .badge-confirmed{background:#d1fae5;color:#065f46}
+  .badge-cancelled{background:#fee2e2;color:#991b1b}
+  .badge-completed{background:#dbeafe;color:#1e40af}
+  .btn{display:inline-block;background:#2563eb;color:#fff!important;text-decoration:none;padding:12px 28px;border-radius:6px;font-size:14px;font-weight:700;margin:20px 0}
+  .refund-box{background:#fefce8;border:1px solid #fde68a;border-radius:6px;padding:16px;margin:20px 0}
+  .refund-box.full{background:#f0fdf4;border-color:#86efac}
+  .refund-box.none{background:#fef2f2;border-color:#fca5a5}
+  .footer{background:#f8fafc;border-top:1px solid #e2e8f0;padding:20px 32px;text-align:center;font-size:12px;color:#94a3b8}
+  .footer a{color:#2563eb;text-decoration:none}
+  h2{font-size:18px;color:#1e293b;margin:0 0 16px}
+  p{line-height:1.6;font-size:14px;margin:0 0 12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <h1>AnyBooking</h1>
+    <p>Your trusted event booking platform</p>
+  </div>
+  <div class="body">
+    {% block content %}{% endblock %}
+  </div>
+  <div class="footer">
+    <p>© AnyBooking · <a href="{{ site_url }}">anybooking.in</a></p>
+    <p>This is an automated message — please do not reply directly to this email.</p>
+  </div>
+</div>
+</body>
+</html>

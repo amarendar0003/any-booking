@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}Pay — Booking #{{ booking.pk }}{% endblock %}
+
+{% block content %}
+<div class="container my-5" style="max-width:560px">
+  <div class="card border-0 shadow rounded-4 p-4 p-md-5">
+    <div class="text-center mb-4">
+      <div class="display-5 text-primary mb-2"><i class="bi bi-shield-lock"></i></div>
+      <h3 class="fw-bold">Secure Payment</h3>
+      <p class="text-muted small">Powered by Razorpay</p>
+    </div>
+
+    <div class="card bg-light border-0 rounded-3 p-3 mb-4 small">
+      <div class="row g-2">
+        <div class="col-6 text-muted">Booking #</div>
+        <div class="col-6 fw-semibold">#{{ booking.pk }}</div>
+        <div class="col-6 text-muted">Service</div>
+        <div class="col-6">{{ booking.service.name }}</div>
+        <div class="col-6 text-muted">Customer</div>
+        <div class="col-6">{{ booking.customer_name }}</div>
+        <div class="col-6 text-muted">Event Date</div>
+        <div class="col-6">{{ booking.event_date }}</div>
+        <div class="col-6 text-muted fw-bold">Amount</div>
+        <div class="col-6 fw-bold text-primary fs-5">
+          {{ booking.service.currency_symbol }}{{ booking.total_amount|floatformat:0 }}
+        </div>
+      </div>
+    </div>
+
+    <button id="pay-btn" class="btn btn-primary btn-lg w-100">
+      <i class="bi bi-credit-card"></i>
+      Pay {{ booking.service.currency_symbol }}{{ booking.total_amount|floatformat:0 }}
+    </button>
+    <p class="text-muted text-center small mt-3">
+      <i class="bi bi-lock"></i> 256-bit SSL encrypted · UPI, Cards, Net Banking accepted
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+document.getElementById('pay-btn').onclick = function () {
+  const options = {
+    key: '{{ razorpay_key }}',
+    amount: {{ amount_minor }},
+    currency: '{{ currency }}',
+    name: 'AnyBooking',
+    description: 'Booking #{{ booking.pk }} — {{ booking.service.name }}',
+    order_id: '{{ razorpay_order_id }}',
+    prefill: {
+      name: '{{ booking.customer_name }}',
+      email: '{{ booking.customer_email }}',
+      contact: '{{ booking.customer_phone }}'
+    },
+    theme: { color: '#1a56db' },
+    handler: function (response) {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '{% url "payment_callback" %}';
+      const csrfInput = document.createElement('input');
+      csrfInput.type = 'hidden';
+      csrfInput.name = 'csrfmiddlewaretoken';
+      csrfInput.value = '{{ csrf_token }}';
+      form.appendChild(csrfInput);
+      ['razorpay_payment_id','razorpay_order_id','razorpay_signature'].forEach(key => {
+        const inp = document.createElement('input');
+        inp.type = 'hidden'; inp.name = key; inp.value = response[key];
+        form.appendChild(inp);
+      });
+      document.body.appendChild(form);
+      form.submit();
+    }
+  };
+  new Razorpay(options).open();
+};
+</script>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Payment Unavailable{% endblock %}
+
+{% block content %}
+<div class="container my-5" style="max-width:560px">
+  <div class="card border-0 shadow rounded-4 p-4 p-md-5 text-center">
+    <div class="display-3 text-warning mb-3"><i class="bi bi-exclamation-triangle-fill"></i></div>
+    <h2 class="fw-bold">Payment Unavailable</h2>
+    <p class="text-muted mb-4">
+      We could not initialise the payment gateway. Please contact us to complete your booking.
+    </p>
+    {% if error %}
+    <p class="text-danger small font-monospace">{{ error }}</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

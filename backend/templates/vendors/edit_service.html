@@ -1,0 +1,82 @@
+{% extends "vendors/base.html" %}
+
+{% block title %}Edit {{ service.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-pencil-square me-2 text-primary"></i>Edit {{ service.name }}</h1>
+  <a href="{% url 'vendor_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> Back to dashboard
+  </a>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-md-6">
+    <div class="v-table-wrap">
+      <div class="v-table-head">Your Price</div>
+      <div class="p-3">
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-2">
+            <label class="form-label small fw-500 mb-1">Price ({{ service.currency_symbol }})</label>
+            <input type="number" step="0.01" name="base_price" value="{{ service.base_price }}"
+                   class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-500 mb-1">Price unit</label>
+            <input type="text" name="price_unit" value="{{ service.price_unit }}" class="form-control">
+          </div>
+          <button type="submit" class="btn btn-primary">Save price</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-6">
+    <div class="v-table-wrap">
+      <div class="v-table-head">Photos</div>
+      <div class="p-3">
+        {% if images %}
+        <form method="post" enctype="multipart/form-data" id="photoForm">
+          {% csrf_token %}
+          <div class="row g-2 mb-3">
+            {% for img in images %}
+            <div class="col-6">
+              <div class="border rounded-2 p-2">
+                <img src="{{ img.image.url }}" class="img-fluid rounded mb-1" alt="{{ img.caption }}">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="primary_image"
+                         value="{{ img.id }}" id="primary{{ img.id }}" {% if img.is_primary %}checked{% endif %}>
+                  <label class="form-check-label small" for="primary{{ img.id }}">Primary</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="delete_image"
+                         value="{{ img.id }}" id="delete{{ img.id }}">
+                  <label class="form-check-label small text-danger" for="delete{{ img.id }}">Delete</label>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-500 mb-1">Add a photo</label>
+            <input type="file" name="new_image" accept="image/*" class="form-control form-control-sm">
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">Save photos</button>
+        </form>
+        {% else %}
+        <p class="text-muted">No photos yet.</p>
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label small fw-500 mb-1">Add a photo</label>
+            <input type="file" name="new_image" accept="image/*" class="form-control form-control-sm">
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">Upload</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
