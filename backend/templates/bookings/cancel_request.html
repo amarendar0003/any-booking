@@ -5,11 +5,11 @@
 <div class="container my-5" style="max-width:600px">
 
   {% if submitted %}
-  <div class="card border-0 shadow rounded-4 p-4 p-md-5 text-center">
-    <div class="display-3 text-warning mb-3"><i class="bi bi-hourglass-split"></i></div>
-    <h2 class="fw-bold">Request Submitted</h2>
+  <div class="card rounded-4 p-4 p-md-5 text-center lookup-card">
+    <div class="display-3 mb-3" style="color: var(--primary);"><i class="bi bi-hourglass-split"></i></div>
+    <h2 class="fw-bold" style="color: var(--text-primary);">Request Submitted</h2>
     <p class="text-muted mb-4">
-      Your cancellation request for booking <strong class="font-monospace">{{ booking.confirmation_number }}</strong>
+      Your cancellation request for booking <strong class="font-monospace text-primary">{{ booking.confirmation_number }}</strong>
       has been received. Our team will review it and contact you shortly with the next steps.
     </p>
     <div class="card bg-light border-0 rounded-3 p-3 text-start mb-4 small">
@@ -23,28 +23,28 @@
       </div>
     </div>
     <a href="{% url 'booking_lookup' %}" class="btn btn-outline-primary">
-      <i class="bi bi-search"></i> Find Another Booking
+      <i class="bi bi-search me-1"></i> Find Another Booking
     </a>
   </div>
 
   {% elif already_requested %}
-  <div class="card border-0 shadow rounded-4 p-4 p-md-5 text-center">
-    <div class="display-3 text-info mb-3"><i class="bi bi-info-circle-fill"></i></div>
-    <h2 class="fw-bold">Already Requested</h2>
+  <div class="card rounded-4 p-4 p-md-5 text-center lookup-card">
+    <div class="display-3 mb-3" style="color: var(--primary);"><i class="bi bi-info-circle-fill"></i></div>
+    <h2 class="fw-bold" style="color: var(--text-primary);">Already Requested</h2>
     <p class="text-muted mb-4">
-      A cancellation request for booking <strong class="font-monospace">{{ booking.confirmation_number }}</strong>
+      A cancellation request for booking <strong class="font-monospace text-primary">{{ booking.confirmation_number }}</strong>
       was already submitted{% if booking.cancellation_requested_at %} on {{ booking.cancellation_requested_at|date:"d M Y" }}{% endif %}.
       Our team is reviewing it — we'll contact you soon.
     </p>
     <a href="{% url 'booking_lookup' %}" class="btn btn-outline-primary">
-      <i class="bi bi-search"></i> Back to Find My Booking
+      <i class="bi bi-search me-1"></i> Back to Find My Booking
     </a>
   </div>
 
   {% else %}
-  <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5">
+  <div class="card rounded-4 p-4 p-md-5 lookup-card">
     <div class="mb-4">
-      <h3 class="fw-bold mb-1">Request Cancellation</h3>
+      <h3 class="fw-bold mb-1" style="color: var(--text-primary);">Request Cancellation</h3>
       <p class="text-muted small mb-0">
         Booking <strong class="font-monospace text-primary">{{ booking.confirmation_number }}</strong>
       </p>

@@ -1,0 +1,603 @@
+{% load static %}
+{# ── Auth Modal — multi-step: login | signup(email+role) | otp | create-password #}
+
+<div class="modal fade" id="authModal" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered auth-modal-dialog">
+    <div class="modal-content auth-modal-content">
+
+      {# ── Close button ── #}
+      <button type="button" class="auth-modal-close" data-bs-dismiss="modal" aria-label="Close">
+        <i class="bi bi-x-lg"></i>
+      </button>
+
+      {# ── Step indicator ── #}
+      <div class="auth-step-bar" id="authStepBar">
+        <div class="auth-step-dot active" data-step="0"></div>
+        <div class="auth-step-dot" data-step="1"></div>
+        <div class="auth-step-dot" data-step="2"></div>
+        <div class="auth-step-dot" data-step="3"></div>
+      </div>
+
+      {# ── Brand header ── #}
+      <div class="auth-brand">
+        <img src="{% static 'img/AnyBookingMainLogo.jpg' %}" alt="AnyBooking" class="auth-brand-logo">
+        <span class="auth-brand-name">AnyBooking</span>
+      </div>
+
+      {# ── Error banner ── #}
+      <div class="auth-error-banner d-none" id="authError">
+        <i class="bi bi-exclamation-circle-fill me-2"></i>
+        <span id="authErrorText"></span>
+      </div>
+
+      {# ─────────────────── STEP 0 — choose Sign In or Sign Up ─────────────────── #}
+      <div class="auth-step" id="stepChoose" data-step-index="0">
+        <h2 class="auth-title">Welcome to AnyBooking</h2>
+        <p class="auth-subtitle">Already have an account? Sign in, or create a new one to get started.</p>
+        <button class="auth-btn auth-btn-primary" id="btnGoLogin">
+          <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+        </button>
+        <div class="auth-divider"><span>New user?</span></div>
+        <button class="auth-btn auth-btn-outline" id="btnGoSignup">
+          <i class="bi bi-person-plus me-2"></i>Create Account
+        </button>
+      </div>
+
+      {# ─────────────────── STEP LOGIN ─────────────────────────────────────────── #}
+      <div class="auth-step d-none" id="stepLogin" data-step-index="L">
+        <button class="auth-back-btn" id="btnLoginBack"><i class="bi bi-arrow-left"></i></button>
+        <h2 class="auth-title">Sign in</h2>
+        <p class="auth-subtitle">Enter your email and password</p>
+        <form id="loginForm" novalidate>
+          {% csrf_token %}
+          <div class="auth-field">
+            <label for="loginEmail">Email address</label>
+            <div class="auth-input-wrap">
+              <i class="bi bi-envelope auth-input-icon"></i>
+              <input type="email" id="loginEmail" name="email" placeholder="you@example.com"
+                     class="auth-input" autocomplete="email" required>
+            </div>
+          </div>
+          <div class="auth-field">
+            <label for="loginPassword">Password</label>
+            <div class="auth-input-wrap">
+              <i class="bi bi-lock auth-input-icon"></i>
+              <input type="password" id="loginPassword" name="password" placeholder="••••••••"
+                     class="auth-input" autocomplete="current-password" required>
+              <button type="button" class="auth-pw-toggle" data-target="loginPassword"
+                      aria-label="Toggle password">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+          </div>
+          <button type="submit" class="auth-btn auth-btn-primary auth-submit" id="btnLoginSubmit">
+            <span class="auth-btn-text">Sign In</span>
+            <span class="auth-btn-spinner d-none"><i class="bi bi-arrow-repeat auth-spin"></i></span>
+          </button>
+        </form>
+        <div class="auth-alt-text">
+          Don't have an account?
+          <button class="auth-link-btn" id="btnLoginToSignup">Create one</button>
+        </div>
+      </div>
+
+      {# ─────────────────── STEP 1 — Email + Role ──────────────────────────────── #}
+      <div class="auth-step d-none" id="stepSignup1" data-step-index="1">
+        <button class="auth-back-btn" id="btnSignup1Back"><i class="bi bi-arrow-left"></i></button>
+        <h2 class="auth-title">Create account</h2>
+        <p class="auth-subtitle">Enter your email and choose your role</p>
+        <form id="signupForm1" novalidate>
+          {% csrf_token %}
+          <div class="auth-field">
+            <label for="signupEmail">Email address</label>
+            <div class="auth-input-wrap">
+              <i class="bi bi-envelope auth-input-icon"></i>
+              <input type="email" id="signupEmail" name="email" placeholder="you@example.com"
+                     class="auth-input" autocomplete="email" required>
+            </div>
+          </div>
+          <div class="auth-field">
+            <label for="signupRole">I am a…</label>
+            <div class="auth-role-grid">
+              <label class="auth-role-card" id="roleCardCustomer">
+                <input type="radio" name="role" value="customer" class="auth-role-radio">
+                <span class="auth-role-icon">🛒</span>
+                <span class="auth-role-label">Customer</span>
+                <span class="auth-role-desc">Browse &amp; book services</span>
+              </label>
+              <label class="auth-role-card" id="roleCardVendor">
+                <input type="radio" name="role" value="vendor" class="auth-role-radio">
+                <span class="auth-role-icon">🏪</span>
+                <span class="auth-role-label">Vendor</span>
+                <span class="auth-role-desc">List &amp; manage services</span>
+              </label>
+            </div>
+          </div>
+          <button type="submit" class="auth-btn auth-btn-primary auth-submit" id="btnSignup1Submit">
+            <span class="auth-btn-text">Continue &rarr;</span>
+            <span class="auth-btn-spinner d-none"><i class="bi bi-arrow-repeat auth-spin"></i></span>
+          </button>
+        </form>
+        <div class="auth-alt-text">
+          Already have an account?
+          <button class="auth-link-btn" id="btnSignupToLogin">Sign in</button>
+        </div>
+      </div>
+
+      {# ─────────────────── STEP 2 — OTP Verification ──────────────────────────── #}
+      <div class="auth-step d-none" id="stepOtp" data-step-index="2">
+        <h2 class="auth-title">Check your email</h2>
+        <p class="auth-subtitle" id="otpSubtitle">
+          We sent a 6-digit code to <strong id="otpEmailDisplay"></strong>
+        </p>
+        <form id="otpForm" novalidate>
+          {% csrf_token %}
+          <div class="auth-otp-grid" id="otpGrid">
+            <input type="text" inputmode="numeric" maxlength="1" class="auth-otp-box" data-idx="0" aria-label="Digit 1">
+            <input type="text" inputmode="numeric" maxlength="1" class="auth-otp-box" data-idx="1" aria-label="Digit 2">
+            <input type="text" inputmode="numeric" maxlength="1" class="auth-otp-box" data-idx="2" aria-label="Digit 3">
+            <input type="text" inputmode="numeric" maxlength="1" class="auth-otp-box" data-idx="3" aria-label="Digit 4">
+            <input type="text" inputmode="numeric" maxlength="1" class="auth-otp-box" data-idx="4" aria-label="Digit 5">
+            <input type="text" inputmode="numeric" maxlength="1" class="auth-otp-box" data-idx="5" aria-label="Digit 6">
+          </div>
+          <button type="submit" class="auth-btn auth-btn-primary auth-submit" id="btnOtpSubmit">
+            <span class="auth-btn-text">Verify Code</span>
+            <span class="auth-btn-spinner d-none"><i class="bi bi-arrow-repeat auth-spin"></i></span>
+          </button>
+        </form>
+        <div class="auth-resend-wrap">
+          <span class="auth-resend-timer" id="otpTimerText">Resend in <strong id="otpCountdown">05:00</strong></span>
+          <button class="auth-link-btn d-none" id="btnResendOtp">Resend code</button>
+        </div>
+      </div>
+
+      {# ─────────────────── STEP 3 — Create Password ───────────────────────────── #}
+      <div class="auth-step d-none" id="stepPassword" data-step-index="3">
+        <h2 class="auth-title">Create password</h2>
+        <p class="auth-subtitle">Your email is verified! Set a secure password.</p>
+        <form id="passwordForm" novalidate>
+          {% csrf_token %}
+          <input type="hidden" id="setupToken" name="setup_token">
+          <div class="auth-field">
+            <label for="newPassword">Password</label>
+            <div class="auth-input-wrap">
+              <i class="bi bi-lock auth-input-icon"></i>
+              <input type="password" id="newPassword" name="password" placeholder="Min 8 characters"
+                     class="auth-input" autocomplete="new-password" required>
+              <button type="button" class="auth-pw-toggle" data-target="newPassword"
+                      aria-label="Toggle password">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+            <div class="auth-pw-strength" id="pwStrengthBar">
+              <div class="auth-pw-strength-fill" id="pwStrengthFill"></div>
+            </div>
+            <div class="auth-pw-strength-label" id="pwStrengthLabel"></div>
+          </div>
+          <div class="auth-field">
+            <label for="newPassword2">Confirm password</label>
+            <div class="auth-input-wrap">
+              <i class="bi bi-lock-fill auth-input-icon"></i>
+              <input type="password" id="newPassword2" name="password2" placeholder="Repeat password"
+                     class="auth-input" autocomplete="new-password" required>
+              <button type="button" class="auth-pw-toggle" data-target="newPassword2"
+                      aria-label="Toggle password">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+          </div>
+          <button type="submit" class="auth-btn auth-btn-primary auth-submit" id="btnPasswordSubmit">
+            <span class="auth-btn-text"><i class="bi bi-check-circle me-2"></i>Create Account</span>
+            <span class="auth-btn-spinner d-none"><i class="bi bi-arrow-repeat auth-spin"></i></span>
+          </button>
+        </form>
+      </div>
+
+      {# ─────────────────── SUCCESS state ──────────────────────────────────────── #}
+      <div class="auth-step d-none" id="stepSuccess" data-step-index="S">
+        <div class="auth-success-icon">
+          <i class="bi bi-check-circle-fill"></i>
+        </div>
+        <h2 class="auth-title">You're all set!</h2>
+        <p class="auth-subtitle" id="successMsg">Redirecting you now…</p>
+        <div class="auth-spinner-wrap">
+          <i class="bi bi-arrow-repeat auth-spin auth-spin-lg"></i>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{# ── Auth Modal JavaScript ── #}
+<script>
+(function () {
+  'use strict';
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let currentEmail = '';
+  let currentRole = '';
+  let setupToken = '';
+  let otpTimer = null;
+
+  // ── DOM refs ───────────────────────────────────────────────────────────────
+  const modal       = document.getElementById('authModal');
+  const bsModal     = () => bootstrap.Modal.getOrCreateInstance(modal);
+  const errBanner   = document.getElementById('authError');
+  const errText     = document.getElementById('authErrorText');
+  const stepBar     = document.getElementById('authStepBar');
+  const stepDots    = stepBar.querySelectorAll('.auth-step-dot');
+
+  // steps
+  const steps = {
+    choose   : document.getElementById('stepChoose'),
+    login    : document.getElementById('stepLogin'),
+    signup1  : document.getElementById('stepSignup1'),
+    otp      : document.getElementById('stepOtp'),
+    password : document.getElementById('stepPassword'),
+    success  : document.getElementById('stepSuccess'),
+  };
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function showStep(name, barIndex) {
+    clearError();
+    Object.values(steps).forEach(el => el.classList.add('d-none'));
+    steps[name].classList.remove('d-none');
+
+    // Update step dots
+    stepDots.forEach((dot, i) => {
+      dot.classList.toggle('active', i <= barIndex);
+    });
+  }
+
+  function showError(msg) {
+    errText.textContent = msg;
+    errBanner.classList.remove('d-none');
+    errBanner.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  function clearError() {
+    errBanner.classList.add('d-none');
+    errText.textContent = '';
+  }
+
+  function setLoading(btnEl, loading) {
+    const text    = btnEl.querySelector('.auth-btn-text');
+    const spinner = btnEl.querySelector('.auth-btn-spinner');
+    btnEl.disabled = loading;
+    text.classList.toggle('d-none', loading);
+    spinner.classList.toggle('d-none', !loading);
+  }
+
+  // Read CSRF token from the cookie — always fresh even after session changes.
+  // This avoids stale-token CSRF 403 errors after logout/session rotation.
+  function getCsrfToken() {
+    const v = document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)');
+    return v ? v.pop() : '';
+  }
+
+  async function postForm(url, data) {
+    const fd = new FormData();
+    // Always inject a fresh CSRF token from the cookie
+    fd.append('csrfmiddlewaretoken', getCsrfToken());
+    Object.entries(data).forEach(([k, v]) => {
+      if (k !== 'csrfmiddlewaretoken') fd.append(k, v); // avoid duplicates
+    });
+    const r = await fetch(url, {
+      method: 'POST',
+      body: fd,
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      credentials: 'same-origin',
+    });
+    return r.json();
+  }
+
+  // ── Password strength ──────────────────────────────────────────────────────
+  function calcStrength(pw) {
+    let score = 0;
+    if (pw.length >= 8)  score++;
+    if (pw.length >= 12) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+    return score;
+  }
+
+  function updateStrengthBar(pw) {
+    const fill  = document.getElementById('pwStrengthFill');
+    const label = document.getElementById('pwStrengthLabel');
+    const score = calcStrength(pw);
+    const pct   = (score / 5) * 100;
+    const colors = ['#ef4444','#f97316','#eab308','#22c55e','#16a34a'];
+    const labels = ['Very weak','Weak','Fair','Strong','Very strong'];
+    fill.style.width  = pct + '%';
+    fill.style.background = colors[score - 1] || '#e2e8f0';
+    label.textContent = pw ? (labels[score - 1] || '') : '';
+    label.style.color = colors[score - 1] || '#94a3b8';
+  }
+
+  // ── Password toggle ────────────────────────────────────────────────────────
+  document.querySelectorAll('.auth-pw-toggle').forEach(btn => {
+    btn.addEventListener('click', function () {
+      const inp = document.getElementById(this.dataset.target);
+      const ico = this.querySelector('i');
+      if (inp.type === 'password') {
+        inp.type = 'text';
+        ico.className = 'bi bi-eye-slash';
+      } else {
+        inp.type = 'password';
+        ico.className = 'bi bi-eye';
+      }
+    });
+  });
+
+  // ── OTP grid keyboard nav ─────────────────────────────────────────────────
+  const otpBoxes = document.querySelectorAll('.auth-otp-box');
+  otpBoxes.forEach((box, idx) => {
+    box.addEventListener('input', (e) => {
+      const val = e.target.value.replace(/\D/g, '');
+      e.target.value = val.slice(-1);
+      if (val && idx < 5) otpBoxes[idx + 1].focus();
+    });
+    box.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !box.value && idx > 0) {
+        otpBoxes[idx - 1].focus();
+      }
+    });
+    box.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+      [...pasted.slice(0, 6)].forEach((ch, i) => {
+        if (otpBoxes[i]) otpBoxes[i].value = ch;
+      });
+      const last = Math.min(pasted.length, 5);
+      otpBoxes[last].focus();
+    });
+  });
+
+  function getOtpValue() {
+    return [...otpBoxes].map(b => b.value).join('');
+  }
+
+  function clearOtp() {
+    otpBoxes.forEach(b => { b.value = ''; });
+    if (otpBoxes[0]) otpBoxes[0].focus();
+  }
+
+  // ── OTP countdown timer ────────────────────────────────────────────────────
+  function startOtpTimer() {
+    clearInterval(otpTimer);
+    const countdownEl = document.getElementById('otpCountdown');
+    const timerText   = document.getElementById('otpTimerText');
+    const resendBtn   = document.getElementById('btnResendOtp');
+    let seconds = 5 * 60; // 5 minutes
+
+    timerText.classList.remove('d-none');
+    resendBtn.classList.add('d-none');
+
+    otpTimer = setInterval(() => {
+      seconds--;
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      countdownEl.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      if (seconds <= 0) {
+        clearInterval(otpTimer);
+        timerText.classList.add('d-none');
+        resendBtn.classList.remove('d-none');
+      }
+    }, 1000);
+  }
+
+  // ── Navigation ─────────────────────────────────────────────────────────────
+  document.getElementById('btnGoLogin').addEventListener('click', () => {
+    showStep('login', 0);
+    document.getElementById('loginEmail').focus();
+  });
+
+  document.getElementById('btnGoSignup').addEventListener('click', () => {
+    showStep('signup1', 1);
+    document.getElementById('signupEmail').focus();
+  });
+
+  document.getElementById('btnLoginBack').addEventListener('click', () => showStep('choose', 0));
+  document.getElementById('btnSignup1Back').addEventListener('click', () => showStep('choose', 0));
+
+  document.getElementById('btnLoginToSignup').addEventListener('click', () => {
+    showStep('signup1', 1);
+    const loginEmail = document.getElementById('loginEmail').value;
+    if (loginEmail) document.getElementById('signupEmail').value = loginEmail;
+  });
+
+  document.getElementById('btnSignupToLogin').addEventListener('click', () => {
+    showStep('login', 0);
+    const signupEmail = document.getElementById('signupEmail').value;
+    if (signupEmail) document.getElementById('loginEmail').value = signupEmail;
+  });
+
+  // Role card selection
+  document.querySelectorAll('.auth-role-radio').forEach(radio => {
+    radio.addEventListener('change', function () {
+      document.querySelectorAll('.auth-role-card').forEach(c => c.classList.remove('selected'));
+      this.closest('.auth-role-card').classList.add('selected');
+    });
+  });
+
+  // password strength live feedback
+  document.getElementById('newPassword').addEventListener('input', function () {
+    updateStrengthBar(this.value);
+  });
+
+  // ── SIGNUP STEP 1 — submit email + role ────────────────────────────────────
+  document.getElementById('signupForm1').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const email = document.getElementById('signupEmail').value.trim();
+    const roleInput = document.querySelector('input[name="role"]:checked');
+    if (!email) return showError('Please enter your email address.');
+    if (!roleInput) return showError('Please select your role (Customer or Vendor).');
+
+    currentEmail = email;
+    currentRole  = roleInput.value;
+    const btn = document.getElementById('btnSignup1Submit');
+
+    setLoading(btn, true);
+    try {
+      const data = await postForm('/accounts/signup/', {
+        email: currentEmail,
+        role: currentRole,
+      });
+      if (!data.ok) return showError(data.error || 'Something went wrong.');
+      // Move to OTP step
+      document.getElementById('otpEmailDisplay').textContent = currentEmail;
+      clearOtp();
+      startOtpTimer();
+      showStep('otp', 2);
+      otpBoxes[0].focus();
+    } catch {
+      showError('Network error. Please try again.');
+    } finally {
+      setLoading(btn, false);
+    }
+  });
+
+  // ── OTP — verify ───────────────────────────────────────────────────────────
+  document.getElementById('otpForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const otp = getOtpValue();
+    if (otp.length < 6) return showError('Please enter the complete 6-digit code.');
+
+    const btn = document.getElementById('btnOtpSubmit');
+    setLoading(btn, true);
+    try {
+      const data = await postForm('/accounts/verify-email/', {
+        email: currentEmail,
+        otp,
+      });
+      if (!data.ok) {
+        clearOtp();
+        return showError(data.error || 'Invalid code. Please try again.');
+      }
+      setupToken = data.setup_token;
+      document.getElementById('setupToken').value = setupToken;
+      clearInterval(otpTimer);
+      showStep('password', 3);
+      document.getElementById('newPassword').focus();
+    } catch {
+      showError('Network error. Please try again.');
+    } finally {
+      setLoading(btn, false);
+    }
+  });
+
+  // ── Resend OTP ─────────────────────────────────────────────────────────────
+  document.getElementById('btnResendOtp').addEventListener('click', async function () {
+    this.disabled = true;
+    clearError();
+    try {
+      await postForm('/accounts/resend-otp/', {
+        email: currentEmail,
+      });
+      clearOtp();
+      startOtpTimer();
+      otpBoxes[0].focus();
+    } catch {
+      showError('Failed to resend. Please try again.');
+    } finally {
+      this.disabled = false;
+    }
+  });
+
+  // ── PASSWORD — create ──────────────────────────────────────────────────────
+  document.getElementById('passwordForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const pw  = document.getElementById('newPassword').value;
+    const pw2 = document.getElementById('newPassword2').value;
+    if (pw !== pw2) return showError('Passwords do not match.');
+    if (pw.length < 8) return showError('Password must be at least 8 characters.');
+
+    const btn = document.getElementById('btnPasswordSubmit');
+    setLoading(btn, true);
+    try {
+      const data = await postForm('/accounts/create-password/', {
+        setup_token: setupToken,
+        password: pw,
+        password2: pw2,
+      });
+      if (!data.ok) return showError(data.error || 'Something went wrong.');
+      // Show success and redirect
+      document.getElementById('successMsg').textContent =
+        currentRole === 'vendor'
+          ? 'Taking you to your vendor dashboard…'
+          : 'Welcome to AnyBooking!';
+      showStep('success', 3);
+      setTimeout(() => {
+        window.location.href = data.redirect || '/';
+      }, 1200);
+    } catch {
+      showError('Network error. Please try again.');
+    } finally {
+      setLoading(btn, false);
+    }
+  });
+
+  // ── LOGIN — submit ─────────────────────────────────────────────────────────
+  document.getElementById('loginForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    if (!email || !password) return showError('Please fill in all fields.');
+
+    const btn = document.getElementById('btnLoginSubmit');
+    setLoading(btn, true);
+    try {
+      const data = await postForm('/accounts/login/', {
+        email,
+        password,
+      });
+      if (!data.ok) return showError(data.error || 'Invalid email or password.');
+      document.getElementById('successMsg').textContent = 'Signed in! Redirecting…';
+      showStep('success', 0);
+      setTimeout(() => {
+        window.location.href = data.redirect || '/';
+      }, 800);
+    } catch {
+      showError('Network error. Please try again.');
+    } finally {
+      setLoading(btn, false);
+    }
+  });
+
+  // ── Open modal from navbar buttons ────────────────────────────────────────
+  // Open modal from navbar — no arg = show choose step (Sign In / New User)
+  window.openAuthModal = function (mode) {
+    const m = bsModal();
+    showStep('choose', 0);
+    m.show();
+    if (mode === 'login') {
+      setTimeout(() => {
+        showStep('login', 0);
+        document.getElementById('loginEmail').focus();
+      }, 150);
+    } else if (mode === 'signup') {
+      setTimeout(() => {
+        showStep('signup1', 1);
+        document.getElementById('signupEmail').focus();
+      }, 150);
+    }
+    // no mode = stay on choose step (default)
+  };
+
+  // Reset modal state on close
+  modal.addEventListener('hidden.bs.modal', function () {
+    clearInterval(otpTimer);
+    showStep('choose', 0);
+    clearError();
+    // Reset forms
+    document.getElementById('loginForm').reset();
+    document.getElementById('signupForm1').reset();
+    document.getElementById('passwordForm').reset();
+    clearOtp();
+    document.querySelectorAll('.auth-role-card').forEach(c => c.classList.remove('selected'));
+    updateStrengthBar('');
+  });
+})();
+</script>

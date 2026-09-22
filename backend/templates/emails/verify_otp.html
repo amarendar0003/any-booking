@@ -1,0 +1,44 @@
+{% extends 'emails/_base.html' %}
+{% block content %}
+<h2 style="font-size:20px;color:#1e293b;margin:0 0 12px">Verify your email address</h2>
+<p style="color:#475569;margin:0 0 24px;line-height:1.6">
+  Thanks for signing up with <strong>AnyBooking</strong>! To complete your registration,
+  please enter the verification code below:
+</p>
+
+<div style="
+  background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+  border-radius: 16px;
+  padding: 32px 24px;
+  text-align: center;
+  margin: 0 0 24px;
+">
+  <p style="color:#bfdbfe;font-size:13px;margin:0 0 8px;letter-spacing:1px;text-transform:uppercase;font-weight:600">
+    Your verification code
+  </p>
+  <div style="
+    font-size: 48px;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 12px;
+    font-family: 'Courier New', monospace;
+    padding: 8px 0;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  ">{{ otp_code }}</div>
+  <p style="color:#93c5fd;font-size:13px;margin:12px 0 0">
+    ⏱ Expires in {{ expires_minutes }} minutes
+  </p>
+</div>
+
+<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:16px;margin:0 0 20px">
+  <p style="margin:0;color:#0369a1;font-size:13px;line-height:1.6">
+    <strong>🔒 Security note:</strong> Never share this code with anyone.
+    AnyBooking will never ask for your verification code by phone or email.
+  </p>
+</div>
+
+<p style="color:#94a3b8;font-size:13px;margin:0;line-height:1.6">
+  If you didn't create an account with AnyBooking, you can safely ignore this email.
+  Your email address will not be used without verification.
+</p>
+{% endblock %}
