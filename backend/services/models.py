@@ -485,3 +485,69 @@ class ServiceImage(models.Model):
 
     def __str__(self):
         return f'{self.service.name} — image {self.order}'
+
+
+# ── Home Page Hero Background ─────────────────────────────────────────────────
+
+class HomeBackgroundImage(models.Model):
+    """
+    Images shown one-at-a-time in the home page hero slideshow.
+
+    Managed entirely from the admin — uploading a new image here updates the
+    live site immediately (no code change / redeploy needed), because the
+    image is written to the configured media storage (local disk in
+    development, Google Cloud Storage in production when GCS_MEDIA_BUCKET is
+    set) rather than a static asset baked into the build.
+
+    Only MAX_IMAGES are kept at a time. When a new image is uploaded past
+    that limit, the oldest one is automatically deleted (file + record) so
+    the admin never has to manually clean up.
+    """
+    MAX_IMAGES = 6
+
+    image = models.ImageField(
+        upload_to='home_background/',
+        help_text=(
+            f'Shown on the home page hero, one image at a time. '
+            f'Up to {MAX_IMAGES} images are kept — uploading a new one beyond '
+            f'that automatically removes the oldest. Wide landscape photos '
+            f'(1600×900px or larger) work best.'
+        ),
+    )
+    order = models.PositiveSmallIntegerField(
+        default=0,
+        help_text='Lower numbers play first in the slideshow. Images with the same order play oldest-first.',
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', 'uploaded_at']
+        verbose_name = 'Home Background Image'
+        verbose_name_plural = 'Home Background Images (max 6)'
+
+    def __str__(self):
+        return f'Home background #{self.pk} ({self.uploaded_at:%Y-%m-%d %H:%M})'
+
+    @classmethod
+    def enforce_limit(cls):
+        """
+        Delete the oldest image(s) beyond MAX_IMAGES, file included.
+        Returns the number of images removed. Safe to call any time.
+        """
+        stale_ids = list(
+            cls.objects.order_by('-uploaded_at').values_list('id', flat=True)[cls.MAX_IMAGES:]
+        )
+        if not stale_ids:
+            return 0
+        for obj in cls.objects.filter(id__in=stale_ids):
+            obj.image.delete(save=False)
+            obj.delete()
+        return len(stale_ids)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        HomeBackgroundImage.enforce_limit()
+
+    def delete(self, *args, **kwargs):
+        self.image.delete(save=False)
+        super().delete(*args, **kwargs)

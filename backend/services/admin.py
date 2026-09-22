@@ -13,6 +13,7 @@ from .models import (
     Country, State, District, City,
     Category, AttributeDefinition, AttributeLocalName, RegionalCategoryConfig,
     Vendor, VendorStaffUser, Service, ServiceAttributeValue, ServiceImage, StaffProfile,
+    HomeBackgroundImage,
 )
 
 
@@ -500,3 +501,81 @@ class StaffProfileAdmin(ModelAdmin):
     def location_label(self, obj):
         return obj.location_label
     location_label.short_description = 'Effective Scope'
+
+
+# ── Home Page Hero Background ─────────────────────────────────────────────────
+
+@admin.register(HomeBackgroundImage)
+class HomeBackgroundImageAdmin(ModelAdmin):
+    """
+    Admin-only control for the home page hero slideshow images.
+
+    Uploading an image here updates the live home page immediately — the
+    file goes to the configured media storage (local disk in dev, Google
+    Cloud Storage in production), so there's no rebuild/redeploy step.
+    Only superusers can manage these since they affect every visitor.
+    """
+    list_display = ('preview', 'order', 'uploaded_at')
+    list_display_links = ('preview',)
+    list_editable = ('order',)
+    ordering = ('order', 'uploaded_at')
+    fields = ('image', 'preview_large', 'order')
+    readonly_fields = ('preview_large',)
+
+    def has_module_permission(self, request):
+        return request.user.is_active and request.user.is_superuser
+
+    def has_add_permission(self, request):
+        return request.user.is_superuser
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def preview(self, obj):
+        if obj.image:
+            return format_html(
+                '<img src="{}" style="height:48px;width:86px;object-fit:cover;'
+                'border-radius:6px;border:1px solid #e5e7eb;" />',
+                obj.image.url,
+            )
+        return '—'
+    preview.short_description = 'Image'
+
+    def preview_large(self, obj):
+        if obj.image:
+            return format_html(
+                '<img src="{}" style="max-height:220px;max-width:100%;object-fit:cover;'
+                'border-radius:8px;border:1px solid #e5e7eb;" />',
+                obj.image.url,
+            )
+        return 'Upload an image and save to see a preview.'
+    preview_large.short_description = 'Preview'
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        remaining = max(0, HomeBackgroundImage.MAX_IMAGES - HomeBackgroundImage.objects.count())
+        extra_context['home_bg_remaining'] = remaining
+        if remaining == 0:
+            messages.info(
+                request,
+                f'You have {HomeBackgroundImage.MAX_IMAGES} home background images (the max). '
+                'Uploading a new one will automatically remove the oldest.',
+            )
+        return super().changelist_view(request, extra_context=extra_context)
+
+    def save_model(self, request, obj, form, change):
+        was_new = obj.pk is None
+        count_before = HomeBackgroundImage.objects.count()
+        super().save_model(request, obj, form, change)  # obj.save() runs enforce_limit()
+        if was_new and count_before >= HomeBackgroundImage.MAX_IMAGES:
+            messages.success(
+                request,
+                'Image uploaded and now live on the home page. Since the '
+                f'{HomeBackgroundImage.MAX_IMAGES}-image limit was reached, the oldest '
+                'background image was automatically removed.',
+            )
+        else:
+            messages.success(request, 'Image uploaded and is now live on the home page.')

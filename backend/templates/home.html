@@ -8,45 +8,69 @@
 {# ── Hero ──────────────────────────────────────────────────────────────── #}
 <div class="hero">
   <div class="hero-slides" aria-hidden="true">
-    <div class="hero-track">
-      <div class="hero-group">
-        <img src="{% static 'img/hero1.jpg' %}" alt="" class="hero-slide">
-        <img src="{% static 'img/hero11.jpg' %}" alt="" class="hero-slide">
-        <img src="{% static 'img/hero111.jpg' %}" alt="" class="hero-slide">
-        <img src="{% static 'img/Mandap1.jpg' %}" alt="" class="hero-slide">
-        <img src="{% static 'img/Mandap11.jpg' %}" alt="" class="hero-slide">
-      </div>
-      <div class="hero-group" aria-hidden="true">
-        <img src="{% static 'img/hero1.jpg' %}" alt="" class="hero-slide">
-        <img src="{% static 'img/hero11.jpg' %}" alt="" class="hero-slide">
-        <img src="{% static 'img/hero111.jpg' %}" alt="" class="hero-slide">
-        <img src="{% static 'img/Mandap1.jpg' %}" alt="" class="hero-slide">
-        <img src="{% static 'img/Mandap11.jpg' %}" alt="" class="hero-slide">
-      </div>
-    </div>
+    {% if hero_images %}
+      {% for img in hero_images %}
+      <div class="hero-slide-fade{% if forloop.first %} is-active{% endif %}"
+           style="background-image:url('{{ img.image.url }}')"></div>
+      {% endfor %}
+    {% else %}
+      {# Fallback shown only until the admin uploads home background images #}
+      <div class="hero-slide-fade is-active" style="background-image:url('{% static 'img/hero1.jpg' %}')"></div>
+      <div class="hero-slide-fade" style="background-image:url('{% static 'img/hero11.jpg' %}')"></div>
+      <div class="hero-slide-fade" style="background-image:url('{% static 'img/hero111.jpg' %}')"></div>
+      <div class="hero-slide-fade" style="background-image:url('{% static 'img/Mandap1.jpg' %}')"></div>
+      <div class="hero-slide-fade" style="background-image:url('{% static 'img/Mandap11.jpg' %}')"></div>
+    {% endif %}
   </div>
   <div class="hero-overlay"></div>
+
+  <div class="hero-ribbon">
+    <span class="hero-ribbon-diamond">◇</span>
+    <span>Book Verified Venues &amp; Event Services Across India</span>
+    <span class="hero-ribbon-diamond">◇</span>
+  </div>
+
   <div class="hero-content">
-    <div class="hero-eyebrow">India's Premier Event Booking Platform</div>
-    <h1>Find &amp; Book the<br><span class="hero-accent">Perfect Venue</span></h1>
+    <div class="hero-eyebrow"><span class="hero-eyebrow-line"></span>Celebrate Life's Big Moments<span class="hero-eyebrow-line"></span></div>
+    <h1>Find &amp; Book the<br><span class="hero-accent">Perfect Venue<span class="hero-cursor" aria-hidden="true"></span></span></h1>
     <p class="hero-sub">Banquet halls, music bands, catering, hotels &amp; more — across India and beyond</p>
+
+    <div class="hero-trust">
+      <span class="hero-trust-item"><i class="bi bi-patch-check-fill"></i>Verified Vendors</span>
+      <span class="hero-trust-item"><i class="bi bi-shield-lock-fill"></i>Secure Booking</span>
+      <span class="hero-trust-item"><i class="bi bi-calendar2-check-fill"></i>Live Availability</span>
+    </div>
+
     <form method="get" action="{% url 'service_list' %}" class="hero-search">
-      <i class="bi bi-search text-muted"></i>
-      <input name="q" placeholder="Search venues, services, cities…" value="{{ request.GET.q }}" autocomplete="off">
-      <button type="submit">Search</button>
+      <span class="hero-search-icon"><i class="bi bi-search"></i></span>
+      <div class="hero-search-field">
+        <label for="hero-search-input">What are you looking for?</label>
+        <input id="hero-search-input" name="q" placeholder="Search venues, services, cities…" value="{{ request.GET.q }}" autocomplete="off">
+      </div>
+      <button type="submit"><i class="bi bi-search"></i><span>Search</span></button>
     </form>
+
     <div class="hero-stats">
-      <div>
-        <div class="hero-stat-num">500+</div>
-        <div class="hero-stat-label">Verified Vendors</div>
+      <div class="hero-stat">
+        <i class="bi bi-patch-check-fill hero-stat-icon"></i>
+        <div>
+          <div class="hero-stat-num">500+</div>
+          <div class="hero-stat-label">Verified Vendors</div>
+        </div>
       </div>
-      <div>
-        <div class="hero-stat-num">15+</div>
-        <div class="hero-stat-label">Service Categories</div>
+      <div class="hero-stat">
+        <i class="bi bi-grid-fill hero-stat-icon"></i>
+        <div>
+          <div class="hero-stat-num">15+</div>
+          <div class="hero-stat-label">Service Categories</div>
+        </div>
       </div>
-      <div>
-        <div class="hero-stat-num">50+</div>
-        <div class="hero-stat-label">Cities Covered</div>
+      <div class="hero-stat">
+        <i class="bi bi-geo-alt-fill hero-stat-icon"></i>
+        <div>
+          <div class="hero-stat-num">50+</div>
+          <div class="hero-stat-label">Cities Covered</div>
+        </div>
       </div>
     </div>
   </div>
@@ -165,4 +189,8 @@
 
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/hero_slideshow.js' %}" defer></script>
 {% endblock %}

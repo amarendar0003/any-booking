@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from django.db.models import Count, Q, F
-from .models import Category, Service, AttributeDefinition, Country, State, District, City
+from .models import Category, Service, AttributeDefinition, Country, State, District, City, HomeBackgroundImage
 
 
 def _category_loc_filter(country_id, state_id):
@@ -37,6 +37,7 @@ def home(request):
     )[:6]
     featured_cities = City.objects.filter(is_featured=True, is_active=True).order_by('name')[:6]
     countries = Country.objects.filter(is_active=True)
+    hero_images = HomeBackgroundImage.objects.all()[:HomeBackgroundImage.MAX_IMAGES]
 
     return render(request, 'home.html', {
         'categories': categories,
@@ -45,6 +46,7 @@ def home(request):
         'countries': countries,
         'pref_country_id': pref_country_id,
         'pref_state_id': pref_state_id,
+        'hero_images': hero_images,
     })
 
 
