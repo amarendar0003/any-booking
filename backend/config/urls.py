@@ -14,6 +14,7 @@ urlpatterns = [
     # REST API (iOS app + future frontends)
     path('api/', include('api.urls')),
     # Web app routes
+    path('accounts/', include('accounts.urls')),
     path('', include('services.urls')),
     path('bookings/', include('bookings.urls')),
     path('payments/', include('payments.urls')),

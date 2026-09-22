@@ -77,46 +77,85 @@
 </div>
 
 {# ── Browse by Category ────────────────────────────────────────────────── #}
-<section class="container my-5">
-  <div class="d-flex align-items-center justify-content-between mb-3">
-    <h2 class="section-title mb-0">Browse by Category</h2>
+<section class="cat-section my-5">
+  <div class="container mb-3">
+    <div class="d-flex align-items-center justify-content-between">
+      <h2 class="section-title mb-0">Browse by Category</h2>
+      {% if categories %}<a href="{% url 'service_list' %}" class="btn-view">View all →</a>{% endif %}
+    </div>
   </div>
-  <div class="cat-grid">
-    {% for cat in categories %}
-    <a href="{% url 'service_list_by_category' cat.slug %}" class="cat-tile">
-      <div class="cat-tile-bg
-        {% if cat.slug == 'banquet_hall' %}cat-bg-banquet
-        {% elif cat.slug == 'music_band' %}cat-bg-music
-        {% elif cat.slug == 'catering' %}cat-bg-catering
-        {% elif cat.slug == 'hotels' %}cat-bg-hotels
-        {% elif cat.slug == 'dancing' %}cat-bg-dancing
-        {% elif cat.slug == 'priests' %}cat-bg-priests
-        {% elif cat.slug == 'event_management' %}cat-bg-events
-        {% else %}cat-bg-default{% endif %}">
-        {% if cat.slug == 'banquet_hall' %}🏛️
-        {% elif cat.slug == 'music_band' %}🎸
-        {% elif cat.slug == 'catering' %}🍽️
-        {% elif cat.slug == 'hotels' %}🏨
-        {% elif cat.slug == 'dancing' %}💃
-        {% elif cat.slug == 'priests' %}🪔
-        {% elif cat.slug == 'event_management' %}🎪
-        {% else %}<i class="bi {{ cat.icon }} text-white"></i>{% endif %}
+  {% if categories %}
+  <div class="cat-marquee-wrap">
+    <div class="cat-marquee" id="catMarquee">
+      <div class="cat-track" id="catTrack">
+      {% for cat in categories %}
+      <a href="{% url 'service_list_by_category' cat.slug %}" class="cat-tile" data-orig="true">
+        <div class="cat-tile-bg
+          {% if cat.slug == 'banquet_hall' %}cat-bg-banquet
+          {% elif cat.slug == 'music_band' %}cat-bg-music
+          {% elif cat.slug == 'catering' %}cat-bg-catering
+          {% elif cat.slug == 'hotels' %}cat-bg-hotels
+          {% elif cat.slug == 'dancing' %}cat-bg-dancing
+          {% elif cat.slug == 'priests' %}cat-bg-priests
+          {% elif cat.slug == 'event_management' %}cat-bg-events
+          {% else %}cat-bg-default{% endif %}">
+          <span class="cat-tile-icon">
+            {% if cat.slug == 'banquet_hall' %}🏛️
+            {% elif cat.slug == 'music_band' %}🎸
+            {% elif cat.slug == 'catering' %}🍽️
+            {% elif cat.slug == 'hotels' %}🏨
+            {% elif cat.slug == 'dancing' %}💃
+            {% elif cat.slug == 'priests' %}🪔
+            {% elif cat.slug == 'event_management' %}🎪
+            {% else %}<i class="bi {{ cat.icon }} text-white"></i>{% endif %}
+          </span>
+        </div>
+        <div class="cat-tile-overlay">
+          <div class="cat-tile-info">
+            <div class="cat-tile-name">{{ cat|local_cat_name:request }}</div>
+            <div class="cat-tile-count">{{ cat.filtered_count }} listing{{ cat.filtered_count|pluralize }}</div>
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+      {% for cat in categories %}
+      <a href="{% url 'service_list_by_category' cat.slug %}" class="cat-tile" data-clone="true" aria-hidden="true" tabindex="-1">
+        <div class="cat-tile-bg
+          {% if cat.slug == 'banquet_hall' %}cat-bg-banquet
+          {% elif cat.slug == 'music_band' %}cat-bg-music
+          {% elif cat.slug == 'catering' %}cat-bg-catering
+          {% elif cat.slug == 'hotels' %}cat-bg-hotels
+          {% elif cat.slug == 'dancing' %}cat-bg-dancing
+          {% elif cat.slug == 'priests' %}cat-bg-priests
+          {% elif cat.slug == 'event_management' %}cat-bg-events
+          {% else %}cat-bg-default{% endif %}">
+          <span class="cat-tile-icon">
+            {% if cat.slug == 'banquet_hall' %}🏛️
+            {% elif cat.slug == 'music_band' %}🎸
+            {% elif cat.slug == 'catering' %}🍽️
+            {% elif cat.slug == 'hotels' %}🏨
+            {% elif cat.slug == 'dancing' %}💃
+            {% elif cat.slug == 'priests' %}🪔
+            {% elif cat.slug == 'event_management' %}🎪
+            {% else %}<i class="bi {{ cat.icon }} text-white"></i>{% endif %}
+          </span>
+        </div>
+        <div class="cat-tile-overlay">
+          <div class="cat-tile-info">
+            <div class="cat-tile-name">{{ cat|local_cat_name:request }}</div>
+            <div class="cat-tile-count">{{ cat.filtered_count }} listing{{ cat.filtered_count|pluralize }}</div>
+          </div>
+        </div>
+      </a>
+      {% endfor %}
       </div>
-      <div class="cat-tile-overlay">
-        <div class="cat-tile-name">{{ cat|local_cat_name:request }}</div>
-        <div class="cat-tile-count">{{ cat.filtered_count }} listing{{ cat.filtered_count|pluralize }}</div>
-      </div>
-    </a>
-    {% empty %}
-    <p class="text-muted">No categories configured yet. <a href="/admin/">Add via admin</a>.</p>
-    {% endfor %}
-    {% if categories %}
-    <a href="{% url 'service_list' %}" class="cat-tile-viewall">
-      <i class="bi bi-grid fs-4"></i>
-      <span>View All</span>
-    </a>
-    {% endif %}
+    </div>
+    <button class="cat-arrow cat-arrow-left" id="catPrev" aria-label="Scroll left"><i class="bi bi-chevron-left"></i></button>
+    <button class="cat-arrow cat-arrow-right" id="catNext" aria-label="Scroll right"><i class="bi bi-chevron-right"></i></button>
   </div>
+  {% else %}
+  <p class="text-muted">No categories configured yet. <a href="/admin/">Add via admin</a>.</p>
+  {% endif %}
 </section>
 
 {# ── Featured Listings ─────────────────────────────────────────────────── #}
@@ -192,5 +231,99 @@
 {% endblock %}
 
 {% block extra_js %}
+<<<<<<< Updated upstream
 <script src="{% static 'js/hero_slideshow.js' %}" defer></script>
 {% endblock %}
+=======
+<script>
+  (function () {
+    var marquee = document.getElementById('catMarquee');
+    var track = document.getElementById('catTrack');
+    if (!marquee || !track) return;
+    var paused = false;
+    var singleSetWidth = 0;
+
+    function setupTrack() {
+      var origItems = Array.from(track.querySelectorAll('.cat-tile[data-orig="true"]'));
+      if (!origItems.length) {
+        origItems = Array.from(track.querySelectorAll('.cat-tile'));
+        origItems.forEach(function (el) { el.setAttribute('data-orig', 'true'); });
+      }
+      if (!origItems.length) return;
+
+      var first = origItems[0];
+      var last = origItems[origItems.length - 1];
+      if (first && last) {
+        var style = window.getComputedStyle(last);
+        var mr = parseFloat(style.marginRight) || 0;
+        singleSetWidth = (last.offsetLeft + last.offsetWidth + mr) - first.offsetLeft;
+      }
+
+      if (singleSetWidth > 0) {
+        // Ensure track has enough cards to cover screen width + buffer at any zoom level
+        var targetWidth = Math.max(window.innerWidth * 2, marquee.clientWidth + singleSetWidth * 2);
+        while (track.scrollWidth < targetWidth) {
+          origItems.forEach(function (item) {
+            var clone = item.cloneNode(true);
+            clone.removeAttribute('data-orig');
+            clone.setAttribute('data-clone', 'true');
+            clone.setAttribute('aria-hidden', 'true');
+            clone.setAttribute('tabindex', '-1');
+            track.appendChild(clone);
+          });
+        }
+      }
+    }
+
+    setupTrack();
+    window.addEventListener('resize', setupTrack);
+    window.addEventListener('load', setupTrack);
+
+    function tick() {
+      if (!paused && singleSetWidth > 0) {
+        marquee.scrollLeft += 0.65;               // scroll speed (px per frame)
+        if (marquee.scrollLeft >= singleSetWidth) {
+          marquee.scrollLeft -= singleSetWidth;   // wrap → seamless loop
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+
+    var wrap = marquee.parentElement;
+    if (wrap) {
+      wrap.addEventListener('mouseenter', function () { paused = true; });
+      wrap.addEventListener('mouseleave', function () { paused = false; });
+      wrap.addEventListener('touchstart', function () { paused = true; }, { passive: true });
+      wrap.addEventListener('touchend', function () {
+        setTimeout(function () { paused = false; }, 2000);
+      }, { passive: true });
+    }
+
+    function go(dir) {
+      if (singleSetWidth <= 0) return;
+      var t = marquee.scrollLeft + dir * 380;     // one tile + gap per click
+      if (t < 0) t += singleSetWidth;             // wrap negative targets
+      if (t >= singleSetWidth) t -= singleSetWidth;
+      marquee.scrollTo({ left: t, behavior: 'smooth' });
+    }
+    var prevBtn = document.getElementById('catPrev');
+    var nextBtn = document.getElementById('catNext');
+    if (prevBtn) prevBtn.addEventListener('click', function () { go(-1); });
+    if (nextBtn) nextBtn.addEventListener('click', function () { go(1); });
+
+    marquee.addEventListener('wheel', function(e) {
+      if (e.deltaY !== 0 && !e.shiftKey) {
+        e.preventDefault();
+        marquee.scrollLeft += e.deltaY;
+        if (marquee.scrollLeft >= singleSetWidth) {
+          marquee.scrollLeft -= singleSetWidth;
+        } else if (marquee.scrollLeft < 0) {
+          marquee.scrollLeft += singleSetWidth;
+        }
+      }
+    }, { passive: false });
+  })();
+</script>
+{% endblock %}
+>>>>>>> Stashed changes

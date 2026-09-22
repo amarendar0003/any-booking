@@ -5,7 +5,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import AuthenticationForm
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 
 from bookings.audit import log_booking_status_change
 from bookings.emails import send_booking_approved, send_booking_cancelled
@@ -70,9 +70,10 @@ def vendor_login_view(request):
     return render(request, 'vendors/login.html', {'form': form})
 
 
+@require_POST
 def vendor_logout_view(request):
     logout(request)
-    return redirect('vendor_login')
+    return redirect('home')  # Redirect to main site home, not the old vendor login page
 
 
 @vendor_required

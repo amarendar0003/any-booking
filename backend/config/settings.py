@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'reviews',
     'analytics',
     'api',
+    'accounts',
 ]
 
 UNFOLD = {
@@ -216,18 +217,21 @@ RAZORPAY_KEY_SECRET = env('RAZORPAY_KEY_SECRET', default='')
 
 LOGIN_URL = '/admin/login/'
 
-# ── Email ──────────────────────────────────────────────────────────────────────
-# In development: print emails to console.
-# In production: set EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-# and configure EMAIL_HOST / EMAIL_PORT / EMAIL_HOST_USER / EMAIL_HOST_PASSWORD
-# via Secret Manager or .env.
-EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
-EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
-EMAIL_PORT = env.int('EMAIL_PORT', default=587)
-EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
-EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='AnyBooking <noreply@anybooking.in>')
+# ── Email (Brevo SMTP) ─────────────────────────────────────────────────────────
+# Credentials live in .env — never committed to source control.
+# BREVO_SMTP_HOST / BREVO_SMTP_PORT / BREVO_SMTP_USER / BREVO_SMTP_PASSWORD
+# are used directly so existing keys need no renaming.
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = env('BREVO_SMTP_HOST', default='smtp-relay.brevo.com')
+EMAIL_PORT = env.int('BREVO_SMTP_PORT', default=587)
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = env('BREVO_SMTP_USER', default='')
+EMAIL_HOST_PASSWORD = env('BREVO_SMTP_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = env(
+    'BREVO_FROM_EMAIL',
+    default='AnyBooking <noreply@anybooking.in>',
+)
+BREVO_FROM_NAME = env('BREVO_FROM_NAME', default='AnyBooking')
 
 # Super-admin notification email (receives all new booking alerts)
 ADMIN_NOTIFY_EMAIL = env('ADMIN_NOTIFY_EMAIL', default='')

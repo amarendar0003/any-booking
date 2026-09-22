@@ -604,10 +604,11 @@ class BookingApi {
         ),
         headers: await _headers(),
       );
-      if (response.statusCode == 200)
+      if (response.statusCode == 200) {
         return BookingResult.fromJson(
           jsonDecode(response.body) as Map<String, dynamic>,
         );
+      }
       return BookingResult.error(
         'No booking found. Check the confirmation number, or your last name and phone number, and try again.',
       );
@@ -4623,12 +4624,13 @@ class _VendorPageState extends State<VendorPage> {
       username.text.trim(),
       password.text,
     );
-    if (mounted)
+    if (mounted) {
       setState(() {
         loading = false;
         message = ok
             ? 'Signed in successfully.'
             : 'Sign-in failed. Please check your details.';
       });
+    }
   }
 }
