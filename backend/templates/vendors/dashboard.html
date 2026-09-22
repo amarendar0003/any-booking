@@ -8,7 +8,7 @@
   <h1><i class="bi bi-speedometer2 me-2 text-primary"></i>Dashboard</h1>
 </div>
 
-<div class="row g-3 mb-4">
+<div class="row g-3 mb-3">
   <div class="col-6 col-md-3">
     <div class="stat-card card-blue">
       <div class="label">Active Listings</div>
@@ -25,6 +25,51 @@
     <div class="stat-card card-green">
       <div class="label">Confirmed Bookings</div>
       <div class="value">{{ confirmed_count }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card card-red">
+      <div class="label">Cancelled Bookings</div>
+      <div class="value">{{ cancelled_count }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Latest upcoming booking + cancelled bookings, side by side -->
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="highlight-card hc-upcoming">
+      <div class="hc-head"><i class="bi bi-calendar-event"></i> Latest Upcoming Booking</div>
+      {% if latest_upcoming_booking %}
+        <div class="hc-title">{{ latest_upcoming_booking.service.name }}</div>
+        <div class="hc-row"><i class="bi bi-person"></i> {{ latest_upcoming_booking.customer_name }}</div>
+        <div class="hc-row"><i class="bi bi-calendar3"></i> {{ latest_upcoming_booking.event_date|date:"d M Y" }}{% if latest_upcoming_booking.event_time %} at {{ latest_upcoming_booking.event_time|time:"g:i A" }}{% endif %}</div>
+        <div class="hc-row"><i class="bi bi-hash"></i> {{ latest_upcoming_booking.confirmation_number }}</div>
+        <div class="hc-row"><i class="bi bi-people"></i> {{ latest_upcoming_booking.guest_count }} guest{{ latest_upcoming_booking.guest_count|pluralize }}</div>
+        <div class="mt-2 d-flex align-items-center justify-content-between">
+          <span class="status-badge badge-{{ latest_upcoming_booking.status }}">{{ latest_upcoming_booking.get_status_display }}</span>
+          <a href="{% url 'vendor_booking_detail' latest_upcoming_booking.id %}" class="btn btn-sm btn-outline-secondary">View <i class="bi bi-arrow-right"></i></a>
+        </div>
+      {% else %}
+        <div class="hc-empty"><i class="bi bi-calendar-x me-1"></i> No upcoming bookings.</div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="highlight-card hc-cancelled">
+      <div class="hc-head"><i class="bi bi-x-circle"></i> Cancelled Bookings</div>
+      <div class="d-flex align-items-center gap-3 mb-2">
+        <div class="hc-count">{{ cancelled_count }}</div>
+        <div class="hc-row mb-0 text-muted">total cancelled</div>
+      </div>
+      {% if latest_cancelled_booking %}
+        <hr class="my-2">
+        <div class="hc-row"><i class="bi bi-clock-history"></i> Most recent: {{ latest_cancelled_booking.service.name }}</div>
+        <div class="hc-row"><i class="bi bi-person"></i> {{ latest_cancelled_booking.customer_name }} &middot; {{ latest_cancelled_booking.event_date|date:"d M Y" }}</div>
+        <a href="{% url 'vendor_booking_detail' latest_cancelled_booking.id %}" class="btn btn-sm btn-outline-secondary mt-1">View <i class="bi bi-arrow-right"></i></a>
+      {% else %}
+        <div class="hc-empty"><i class="bi bi-check2-circle me-1"></i> No cancellations yet.</div>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -73,6 +118,50 @@
   </table>
 </div>
 {% endif %}
+
+<!-- Booking status calendar -->
+<div class="cal-card">
+  <div class="cal-head">
+    <h2><i class="bi bi-calendar3 me-1 text-secondary"></i> {{ calendar_month_label }}</h2>
+    <div class="cal-nav">
+      <a href="?month={{ calendar_prev.month }}&year={{ calendar_prev.year }}" aria-label="Previous month"><i class="bi bi-chevron-left"></i></a>
+      <a href="?month={{ calendar_next.month }}&year={{ calendar_next.year }}" aria-label="Next month"><i class="bi bi-chevron-right"></i></a>
+    </div>
+  </div>
+  <div class="cal-body">
+    <div class="cal-left">
+      <div class="cal-grid">
+        {% for label in calendar_weekday_labels %}
+          <div class="cal-weekday">{{ label }}</div>
+        {% endfor %}
+        {% for week in calendar_weeks %}
+          {% for day in week %}
+            {% if day %}
+              <div class="cal-day {{ day.status }}{% if day.is_today %} today{% endif %}"
+                   data-date="{{ day.date }}" title="{{ day.status|title }}">{{ day.day }}</div>
+            {% else %}
+              <div class="cal-day empty"></div>
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+      </div>
+      <div class="cal-legend">
+        <span><span class="dot dot-available"></span>Available</span>
+        <span><span class="dot dot-booked"></span>Booked</span>
+        <span><span class="dot dot-cancelled"></span>Cancelled (past)</span>
+      </div>
+    </div>
+
+    <div class="cal-detail" id="calDetailPanel">
+      <div class="cal-detail-placeholder">
+        <i class="bi bi-hand-index-thumb"></i>
+        Click a date to see availability or booking details.
+      </div>
+    </div>
+  </div>
+</div>
+
+{{ calendar_day_details|json_script:"cal-day-data" }}
 
 {% if recent_bookings %}
 <div class="v-table-wrap">
@@ -126,4 +215,73 @@
   No bookings yet.
 </div>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var dataEl = document.getElementById('cal-day-data');
+  var panel = document.getElementById('calDetailPanel');
+  if (!dataEl || !panel) return;
+
+  var dayData = JSON.parse(dataEl.textContent);
+  var dayCells = document.querySelectorAll('.cal-day[data-date]');
+
+  function escapeHtml(value) {
+    var div = document.createElement('div');
+    div.textContent = value === null || value === undefined ? '' : String(value);
+    return div.innerHTML;
+  }
+
+  function renderPanel(dateStr) {
+    var info = dayData[dateStr] || { status: 'available', bookings: [] };
+    var dateObj = new Date(dateStr + 'T00:00:00');
+    var dateLabel = dateObj.toLocaleDateString(undefined, {
+      weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+    });
+
+    var html = '<div class="cal-detail-date">' + escapeHtml(dateLabel) + '</div>';
+
+    if (info.status === 'available' || info.bookings.length === 0) {
+      html += '' +
+        '<div class="cal-detail-available">' +
+        '  <i class="bi bi-check-circle-fill"></i>Available to book' +
+        '  <div class="cal-detail-sub">No bookings on this date.</div>' +
+        '</div>';
+    } else {
+      info.bookings.forEach(function (b) {
+        html += '<div class="cal-detail-booking">';
+        html += '<div class="cal-detail-booking-top">';
+        html += '<span class="status-badge badge-' + escapeHtml(b.status) + '">' + escapeHtml(b.status_display) + '</span>';
+        if (b.is_pending) {
+          html += '<span class="cal-pending-flag"><i class="bi bi-hourglass-split"></i>Awaiting approval</span>';
+        }
+        html += '</div>';
+        html += '<div class="cal-detail-service">' + escapeHtml(b.service_name) + '</div>';
+        html += '<div class="cal-detail-row"><i class="bi bi-person"></i>' + escapeHtml(b.customer_name) + '</div>';
+        if (b.event_time) {
+          html += '<div class="cal-detail-row"><i class="bi bi-clock"></i>' + escapeHtml(b.event_time) + '</div>';
+        }
+        html += '<div class="cal-detail-row"><i class="bi bi-people"></i>' + b.guest_count + ' guest' + (b.guest_count === 1 ? '' : 's') + '</div>';
+        html += '<div class="cal-detail-row"><i class="bi bi-hash"></i>' + escapeHtml(b.confirmation_number) + '</div>';
+        if (b.status === 'cancelled' && b.cancellation_reason) {
+          html += '<div class="cal-detail-row"><i class="bi bi-info-circle"></i>' + escapeHtml(b.cancellation_reason) + '</div>';
+        }
+        html += '<a href="' + b.detail_url + '" class="btn btn-sm btn-outline-secondary mt-2">View booking <i class="bi bi-arrow-right"></i></a>';
+        html += '</div>';
+      });
+    }
+
+    panel.innerHTML = html;
+  }
+
+  dayCells.forEach(function (cell) {
+    cell.addEventListener('click', function () {
+      dayCells.forEach(function (c) { c.classList.remove('selected'); });
+      cell.classList.add('selected');
+      renderPanel(cell.getAttribute('data-date'));
+    });
+  });
+})();
+</script>
 {% endblock %}

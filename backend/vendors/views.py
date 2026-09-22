@@ -1,9 +1,13 @@
+import calendar as cal_module
+from datetime import date
 from functools import wraps
 
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import AuthenticationForm
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
@@ -88,6 +92,28 @@ def vendor_dashboard(request, vendor=None, role=None):
     )
     pending_count = Booking.objects.filter(service__in=service_ids, status=Booking.STATUS_PENDING).count()
     confirmed_count = Booking.objects.filter(service__in=service_ids, status=Booking.STATUS_CONFIRMED).count()
+    cancelled_count = Booking.objects.filter(service__in=service_ids, status=Booking.STATUS_CANCELLED).count()
+
+    today = timezone.localdate()
+
+    # Nearest booking still to come (pending or confirmed), soonest first.
+    latest_upcoming_booking = (
+        Booking.objects
+        .filter(service__in=service_ids, event_date__gte=today)
+        .exclude(status=Booking.STATUS_CANCELLED)
+        .select_related('service')
+        .order_by('event_date', 'event_time')
+        .first()
+    )
+
+    # Most recently cancelled booking, for the "Cancelled Bookings" card.
+    latest_cancelled_booking = (
+        Booking.objects
+        .filter(service__in=service_ids, status=Booking.STATUS_CANCELLED)
+        .select_related('service')
+        .order_by('-updated_at')
+        .first()
+    )
 
     service_stats = []
     for service in services:
@@ -102,6 +128,8 @@ def vendor_dashboard(request, vendor=None, role=None):
             'completed': bookings.filter(status=Booking.STATUS_COMPLETED).count(),
         })
 
+    calendar_ctx = _build_dashboard_calendar(request, service_ids, today)
+
     return render(request, 'vendors/dashboard.html', {
         'vendor': vendor,
         'role': role,
@@ -110,7 +138,117 @@ def vendor_dashboard(request, vendor=None, role=None):
         'recent_bookings': recent_bookings,
         'pending_count': pending_count,
         'confirmed_count': confirmed_count,
+        'cancelled_count': cancelled_count,
+        'latest_upcoming_booking': latest_upcoming_booking,
+        'latest_cancelled_booking': latest_cancelled_booking,
+        **calendar_ctx,
     })
+
+
+def _build_dashboard_calendar(request, service_ids, today):
+    """Build a month grid of booking status + per-day booking detail for the
+    vendor dashboard calendar.
+
+    Day status rules (used both for cell coloring and for what the click
+    panel shows):
+      - booked (red): the date has at least one active (pending/confirmed/
+        completed) booking — those are the bookings shown for the day.
+      - cancelled (black): the date has no active booking, only cancelled
+        one(s), AND the date has already passed — the cancelled booking(s)
+        are shown for the day.
+      - available (green): everything else — no bookings shown, "available
+        to book".
+    """
+    try:
+        cal_year = int(request.GET.get('year', today.year))
+        cal_month = int(request.GET.get('month', today.month))
+    except (TypeError, ValueError):
+        cal_year, cal_month = today.year, today.month
+
+    # Roll over if navigation pushed us outside 1-12.
+    if cal_month < 1:
+        cal_month, cal_year = 12, cal_year - 1
+    elif cal_month > 12:
+        cal_month, cal_year = 1, cal_year + 1
+
+    month_bookings = (
+        Booking.objects
+        .filter(service__in=service_ids, event_date__year=cal_year, event_date__month=cal_month)
+        .select_related('service')
+        .order_by('event_time', 'created_at')
+    )
+
+    bookings_by_day = {}
+    for booking in month_bookings:
+        bookings_by_day.setdefault(booking.event_date.day, []).append(booking)
+
+    num_days = cal_module.monthrange(cal_year, cal_month)[1]
+    day_details = {}
+
+    for day in range(1, num_days + 1):
+        day_date = date(cal_year, cal_month, day)
+        day_list = bookings_by_day.get(day, [])
+        active = [b for b in day_list if b.status != Booking.STATUS_CANCELLED]
+        cancelled = [b for b in day_list if b.status == Booking.STATUS_CANCELLED]
+
+        if active:
+            day_status = 'booked'
+            shown = active
+        elif cancelled and day_date < today:
+            day_status = 'cancelled'
+            shown = cancelled
+        else:
+            day_status = 'available'
+            shown = []
+
+        day_details[day_date.isoformat()] = {
+            'status': day_status,
+            'bookings': [
+                {
+                    'id': b.id,
+                    'confirmation_number': b.confirmation_number,
+                    'customer_name': b.customer_name,
+                    'service_name': b.service.name,
+                    'status': b.status,
+                    'status_display': b.get_status_display(),
+                    'is_pending': b.status == Booking.STATUS_PENDING,
+                    'event_time': b.event_time.strftime('%I:%M %p').lstrip('0') if b.event_time else '',
+                    'guest_count': b.guest_count,
+                    'cancellation_reason': b.cancellation_reason,
+                    'detail_url': reverse('vendor_booking_detail', args=[b.id]),
+                }
+                for b in shown
+            ],
+        }
+
+    weeks = []
+    for week in cal_module.Calendar(firstweekday=6).monthdayscalendar(cal_year, cal_month):
+        week_days = []
+        for day in week:
+            if day == 0:
+                week_days.append(None)
+                continue
+            day_date = date(cal_year, cal_month, day)
+            week_days.append({
+                'day': day,
+                'date': day_date.isoformat(),
+                'status': day_details[day_date.isoformat()]['status'],
+                'is_today': day_date == today,
+            })
+        weeks.append(week_days)
+
+    prev_month, prev_year = (12, cal_year - 1) if cal_month == 1 else (cal_month - 1, cal_year)
+    next_month, next_year = (1, cal_year + 1) if cal_month == 12 else (cal_month + 1, cal_year)
+
+    return {
+        'calendar_weeks': weeks,
+        'calendar_weekday_labels': ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+        'calendar_month_label': date(cal_year, cal_month, 1).strftime('%B %Y'),
+        'calendar_prev': {'month': prev_month, 'year': prev_year},
+        'calendar_next': {'month': next_month, 'year': next_year},
+        'calendar_is_current_month': (cal_year, cal_month) == (today.year, today.month),
+        'calendar_day_details': day_details,
+    }
 
 
 @vendor_required
