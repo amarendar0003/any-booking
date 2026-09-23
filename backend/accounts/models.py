@@ -28,6 +28,9 @@ class UserProfile(models.Model):
         choices=ROLE_CHOICES,
         default=ROLE_CUSTOMER,
     )
+    # Contact phone captured during signup — copied into Vendor.phone when
+    # the vendor profile is auto-created.
+    phone = models.CharField(max_length=20, blank=True)
     email_verified = models.BooleanField(default=False)
     password_set = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

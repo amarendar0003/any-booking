@@ -218,17 +218,25 @@ RAZORPAY_KEY_SECRET = env('RAZORPAY_KEY_SECRET', default='')
 LOGIN_URL = '/admin/login/'
 
 # ── Email ──────────────────────────────────────────────────────────────────────
-# In development: print emails to console.
-# In production: set EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-# and configure EMAIL_HOST / EMAIL_PORT / EMAIL_HOST_USER / EMAIL_HOST_PASSWORD
-# via Secret Manager or .env.
-EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
-EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
-EMAIL_PORT = env.int('EMAIL_PORT', default=587)
+# If Brevo SMTP credentials are configured (BREVO_SMTP_*), emails are sent via
+# Brevo automatically. Otherwise they print to the console (dev default).
+# Any value can be overridden explicitly via EMAIL_* env vars (production).
+_brevo_user = env('BREVO_SMTP_USER', default='')
+_brevo_configured = bool(_brevo_user and env('BREVO_SMTP_PASSWORD', default=''))
+EMAIL_BACKEND = env(
+    'EMAIL_BACKEND',
+    default=(
+        'django.core.mail.backends.smtp.EmailBackend'
+        if _brevo_configured else
+        'django.core.mail.backends.console.EmailBackend'
+    ),
+)
+EMAIL_HOST = env('EMAIL_HOST', default=env('BREVO_SMTP_HOST', default='smtp-relay.brevo.com'))
+EMAIL_PORT = env.int('EMAIL_PORT', default=env.int('BREVO_SMTP_PORT', default=587))
 EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
-EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='AnyBooking <noreply@anybooking.in>')
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', default=_brevo_user)
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default=env('BREVO_SMTP_PASSWORD', default=''))
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default=env('BREVO_FROM_EMAIL', default='AnyBooking <noreply@anybooking.in>'))
 
 # Super-admin notification email (receives all new booking alerts)
 ADMIN_NOTIFY_EMAIL = env('ADMIN_NOTIFY_EMAIL', default='')

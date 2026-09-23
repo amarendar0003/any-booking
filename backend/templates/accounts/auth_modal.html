@@ -85,9 +85,25 @@
       <div class="auth-step d-none" id="stepSignup1" data-step-index="1">
         <button class="auth-back-btn" id="btnSignup1Back"><i class="bi bi-arrow-left"></i></button>
         <h2 class="auth-title">Create account</h2>
-        <p class="auth-subtitle">Enter your email and choose your role</p>
+        <p class="auth-subtitle">Enter your details and choose your role</p>
         <form id="signupForm1" novalidate>
           {% csrf_token %}
+          <div class="auth-field">
+            <label for="signupName">Full name</label>
+            <div class="auth-input-wrap">
+              <i class="bi bi-person auth-input-icon"></i>
+              <input type="text" id="signupName" name="name" placeholder="Your full name"
+                     class="auth-input" autocomplete="name" maxlength="150" required>
+            </div>
+          </div>
+          <div class="auth-field">
+            <label for="signupPhone">Phone number</label>
+            <div class="auth-input-wrap">
+              <i class="bi bi-telephone auth-input-icon"></i>
+              <input type="tel" id="signupPhone" name="phone" placeholder="+91 98765 43210"
+                     class="auth-input" autocomplete="tel" maxlength="20" required>
+            </div>
+          </div>
           <div class="auth-field">
             <label for="signupEmail">Email address</label>
             <div class="auth-input-wrap">
@@ -427,11 +443,15 @@
     updateStrengthBar(this.value);
   });
 
-  // ── SIGNUP STEP 1 — submit email + role ────────────────────────────────────
+  // ── SIGNUP STEP 1 — submit name + phone + email + role ────────────────────
   document.getElementById('signupForm1').addEventListener('submit', async function (e) {
     e.preventDefault();
+    const name  = document.getElementById('signupName').value.trim();
+    const phone = document.getElementById('signupPhone').value.trim();
     const email = document.getElementById('signupEmail').value.trim();
     const roleInput = document.querySelector('input[name="role"]:checked');
+    if (!name) return showError('Please enter your name.');
+    if (!phone) return showError('Please enter your phone number.');
     if (!email) return showError('Please enter your email address.');
     if (!roleInput) return showError('Please select your role (Customer or Vendor).');
 
@@ -442,6 +462,8 @@
     setLoading(btn, true);
     try {
       const data = await postForm('/accounts/signup/', {
+        name,
+        phone,
         email: currentEmail,
         role: currentRole,
       });
