@@ -136,6 +136,23 @@ class Category(models.Model):
     def display_name(self):
         return dict(self.CATEGORY_CHOICES).get(self.slug, self.slug)
 
+    @property
+    def static_image_url(self):
+        """
+        Path of a static image for this category, if one exists.
+
+        Convention: drop a file named <slug>.png/.jpg/.jpeg/.webp into
+        static/img/ (e.g. banquet_hall.png) and the home page category
+        card picks it up automatically — no code change needed.
+        Returns None when no such static file exists.
+        """
+        from django.contrib.staticfiles import finders
+        for ext in ('.png', '.jpg', '.jpeg', '.webp'):
+            rel = f'img/{self.slug}{ext}'
+            if finders.find(rel):
+                return rel
+        return None
+
     def get_local_display_name(self, country=None, state=None):
         """Returns localized name for the given country/state, falls back to default."""
         if state:

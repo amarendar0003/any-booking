@@ -90,68 +90,64 @@
       <div class="cat-track" id="catTrack">
       {% for cat in categories %}
       <a href="{% url 'service_list_by_category' cat.slug %}" class="cat-tile" data-orig="true">
-        <div class="cat-tile-bg
-          {% if cat.slug == 'banquet_hall' %}cat-bg-banquet
-          {% elif cat.slug == 'music_band' %}cat-bg-music
-          {% elif cat.slug == 'catering' %}cat-bg-catering
-          {% elif cat.slug == 'hotels' %}cat-bg-hotels
-          {% elif cat.slug == 'dancing' %}cat-bg-dancing
-          {% elif cat.slug == 'priests' %}cat-bg-priests
-          {% elif cat.slug == 'event_management' %}cat-bg-events
-          {% else %}cat-bg-default{% endif %}">
-          <span class="cat-tile-icon">
-            {% if cat.slug == 'banquet_hall' %}🏛️
-            {% elif cat.slug == 'music_band' %}🎸
-            {% elif cat.slug == 'catering' %}🍽️
-            {% elif cat.slug == 'hotels' %}🏨
-            {% elif cat.slug == 'dancing' %}💃
-            {% elif cat.slug == 'priests' %}🪔
-            {% elif cat.slug == 'event_management' %}🎪
-            {% else %}<i class="bi {{ cat.icon }} text-white"></i>{% endif %}
-          </span>
+        <div class="cat-tile-media">
+          {% if cat.static_image_url %}
+            <img class="cat-tile-img" src="{% static cat.static_image_url %}" alt="{{ cat|local_cat_name:request }}">
+          {% else %}
+            <div class="cat-tile-bg">
+              <span class="cat-tile-icon">
+                {% if cat.slug == 'banquet_hall' %}🏛️
+                {% elif cat.slug == 'music_band' %}🎸
+                {% elif cat.slug == 'catering' %}🍽️
+                {% elif cat.slug == 'hotels' %}🏨
+                {% elif cat.slug == 'dancing' %}💃
+                {% elif cat.slug == 'priests' %}🪔
+                {% elif cat.slug == 'event_management' %}🎪
+                {% else %}<i class="bi {{ cat.icon }} text-white"></i>{% endif %}
+              </span>
+            </div>
+          {% endif %}
         </div>
-        <div class="cat-tile-overlay">
-          <div class="cat-tile-info">
-            <div class="cat-tile-name">{{ cat|local_cat_name:request }}</div>
-            <div class="cat-tile-count">{{ cat.filtered_count }} listing{{ cat.filtered_count|pluralize }}</div>
-          </div>
+        <div class="cat-tile-info">
+          <div class="cat-tile-name">{{ cat|local_cat_name:request }}</div>
+          <div class="cat-tile-count">{{ cat.filtered_count }} listing{{ cat.filtered_count|pluralize }}</div>
         </div>
       </a>
       {% endfor %}
+      {% if categories|length > 3 %}
       {% for cat in categories %}
       <a href="{% url 'service_list_by_category' cat.slug %}" class="cat-tile" data-clone="true" aria-hidden="true" tabindex="-1">
-        <div class="cat-tile-bg
-          {% if cat.slug == 'banquet_hall' %}cat-bg-banquet
-          {% elif cat.slug == 'music_band' %}cat-bg-music
-          {% elif cat.slug == 'catering' %}cat-bg-catering
-          {% elif cat.slug == 'hotels' %}cat-bg-hotels
-          {% elif cat.slug == 'dancing' %}cat-bg-dancing
-          {% elif cat.slug == 'priests' %}cat-bg-priests
-          {% elif cat.slug == 'event_management' %}cat-bg-events
-          {% else %}cat-bg-default{% endif %}">
-          <span class="cat-tile-icon">
-            {% if cat.slug == 'banquet_hall' %}🏛️
-            {% elif cat.slug == 'music_band' %}🎸
-            {% elif cat.slug == 'catering' %}🍽️
-            {% elif cat.slug == 'hotels' %}🏨
-            {% elif cat.slug == 'dancing' %}💃
-            {% elif cat.slug == 'priests' %}🪔
-            {% elif cat.slug == 'event_management' %}🎪
-            {% else %}<i class="bi {{ cat.icon }} text-white"></i>{% endif %}
-          </span>
+        <div class="cat-tile-media">
+          {% if cat.static_image_url %}
+            <img class="cat-tile-img" src="{% static cat.static_image_url %}" alt="" aria-hidden="true">
+          {% else %}
+            <div class="cat-tile-bg">
+              <span class="cat-tile-icon">
+                {% if cat.slug == 'banquet_hall' %}🏛️
+                {% elif cat.slug == 'music_band' %}🎸
+                {% elif cat.slug == 'catering' %}🍽️
+                {% elif cat.slug == 'hotels' %}🏨
+                {% elif cat.slug == 'dancing' %}💃
+                {% elif cat.slug == 'priests' %}🪔
+                {% elif cat.slug == 'event_management' %}🎪
+                {% else %}<i class="bi {{ cat.icon }} text-white"></i>{% endif %}
+              </span>
+            </div>
+          {% endif %}
         </div>
-        <div class="cat-tile-overlay">
-          <div class="cat-tile-info">
-            <div class="cat-tile-name">{{ cat|local_cat_name:request }}</div>
-            <div class="cat-tile-count">{{ cat.filtered_count }} listing{{ cat.filtered_count|pluralize }}</div>
-          </div>
+        <div class="cat-tile-info">
+          <div class="cat-tile-name">{{ cat|local_cat_name:request }}</div>
+          <div class="cat-tile-count">{{ cat.filtered_count }} listing{{ cat.filtered_count|pluralize }}</div>
         </div>
       </a>
       {% endfor %}
+      {% endif %}
       </div>
     </div>
+    {% if categories|length > 3 %}
     <button class="cat-arrow cat-arrow-left" id="catPrev" aria-label="Scroll left"><i class="bi bi-chevron-left"></i></button>
     <button class="cat-arrow cat-arrow-right" id="catNext" aria-label="Scroll right"><i class="bi bi-chevron-right"></i></button>
+    {% endif %}
   </div>
   {% else %}
   <p class="text-muted">No categories configured yet. <a href="/admin/">Add via admin</a>.</p>
@@ -248,6 +244,9 @@
         origItems.forEach(function (el) { el.setAttribute('data-orig', 'true'); });
       }
       if (!origItems.length) return;
+
+      // Few categories (3 or fewer) → static row: no clones, no auto-scroll
+      if (origItems.length <= 3) { singleSetWidth = 0; return; }
 
       var first = origItems[0];
       var last = origItems[origItems.length - 1];
