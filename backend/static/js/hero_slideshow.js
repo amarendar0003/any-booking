@@ -20,7 +20,6 @@
 
     var current = 0;
     var timer = null;
-    var heroEl = document.querySelector('.hero');
 
     function goToNext() {
       var next = (current + 1) % slides.length;
@@ -42,12 +41,11 @@
 
     start();
 
-    // Pause on hover/focus so users can read text over the hero without it
-    // changing under them, matching the previous slideshow's behaviour.
-    if (heroEl) {
-      heroEl.addEventListener('mouseenter', stop);
-      heroEl.addEventListener('mouseleave', start);
-    }
+    // Runs continuously regardless of cursor position over the hero or its
+    // cards (search bar, trust pills, stats) — intentionally no hover-pause,
+    // since freezing the background here isn't needed for the text to stay
+    // readable (text legibility comes from the text-shadow/solid colors,
+    // not from stopping the photo underneath).
 
     // Pause when the tab isn't visible to avoid a burst of transitions
     // firing when the user comes back.
