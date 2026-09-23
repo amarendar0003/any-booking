@@ -48,7 +48,12 @@
 
           {% if booking.cancellation_requested %}
           <dt class="col-5 text-danger">Cancellation Requested</dt>
-          <dd class="col-7">{{ booking.cancellation_request_reason|default:"No reason given." }}</dd>
+          <dd class="col-7">
+            {{ booking.cancellation_request_reason|default:"No reason given." }}
+            {% if booking.cancellation_requested_at %}
+            <div class="text-muted small mt-1">Requested {{ booking.cancellation_requested_at|timesince }} ago</div>
+            {% endif %}
+          </dd>
           {% endif %}
         </dl>
       </div>
@@ -60,6 +65,16 @@
     <div class="v-table-wrap mb-3">
       <div class="v-table-head">Approve</div>
       <div class="p-3">
+        {% if booking.cancellation_requested %}
+        <div class="alert alert-warning small mb-2">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i>
+          The customer has requested to cancel this booking. Review the request before approving —
+          approval is disabled while a cancellation request is pending.
+        </div>
+        <button type="button" class="btn btn-success" disabled>
+          <i class="bi bi-check-lg"></i> Approve booking
+        </button>
+        {% else %}
         <form method="post" action="{% url 'vendor_approve_booking' booking.id %}">
           {% csrf_token %}
           <input type="hidden" name="next" value="{% url 'vendor_booking_detail' booking.id %}">
@@ -67,6 +82,7 @@
             <i class="bi bi-check-lg"></i> Approve booking
           </button>
         </form>
+        {% endif %}
       </div>
     </div>
     {% endif %}

@@ -58,6 +58,39 @@
   <div class="col-md-6">
     <div class="highlight-card hc-cancelled">
       <div class="hc-head"><i class="bi bi-x-circle"></i> Cancelled Bookings</div>
+
+      {% if cancellation_requests %}
+      <div class="hc-request-block">
+        <div class="hc-request-title">
+          <i class="bi bi-exclamation-triangle-fill"></i> Cancellation Requested
+          <span class="hc-request-count">{{ cancel_requested_count }}</span>
+        </div>
+        {% for req in cancellation_requests %}
+        <div class="hc-request-item">
+          <div class="hc-request-top">
+            <span class="fw-600">{{ req.customer_name }}</span>
+            <span class="status-badge badge-{{ req.status }}">{{ req.get_status_display }}</span>
+          </div>
+          <div class="hc-row mb-0"><i class="bi bi-shop"></i> {{ req.service.name }}</div>
+          <div class="hc-row mb-0"><i class="bi bi-calendar3"></i> {{ req.event_date|date:"d M Y" }}</div>
+          {% if req.cancellation_request_reason %}
+          <div class="hc-row mb-0"><i class="bi bi-chat-left-text"></i> {{ req.cancellation_request_reason }}</div>
+          {% endif %}
+          {% if req.cancellation_requested_at %}
+          <div class="hc-row mb-0 text-muted"><i class="bi bi-clock"></i> Requested {{ req.cancellation_requested_at|timesince }} ago</div>
+          {% endif %}
+          <a href="{% url 'vendor_booking_detail' req.id %}" class="btn btn-sm btn-outline-danger mt-1">Review <i class="bi bi-arrow-right"></i></a>
+        </div>
+        {% endfor %}
+        {% if cancel_requested_count > cancellation_requests|length %}
+        <a href="{% url 'vendor_bookings' %}?cancel_requested=1" class="hc-request-more">
+          View all {{ cancel_requested_count }} requests <i class="bi bi-arrow-right"></i>
+        </a>
+        {% endif %}
+      </div>
+      <hr class="my-2">
+      {% endif %}
+
       <div class="d-flex align-items-center gap-3 mb-2">
         <div class="hc-count">{{ cancelled_count }}</div>
         <div class="hc-row mb-0 text-muted">total cancelled</div>
@@ -67,7 +100,7 @@
         <div class="hc-row"><i class="bi bi-clock-history"></i> Most recent: {{ latest_cancelled_booking.service.name }}</div>
         <div class="hc-row"><i class="bi bi-person"></i> {{ latest_cancelled_booking.customer_name }} &middot; {{ latest_cancelled_booking.event_date|date:"d M Y" }}</div>
         <a href="{% url 'vendor_booking_detail' latest_cancelled_booking.id %}" class="btn btn-sm btn-outline-secondary mt-1">View <i class="bi bi-arrow-right"></i></a>
-      {% else %}
+      {% elif not cancellation_requests %}
         <div class="hc-empty"><i class="bi bi-check2-circle me-1"></i> No cancellations yet.</div>
       {% endif %}
     </div>
@@ -189,16 +222,26 @@
         <td>{{ booking.event_date|date:"d M Y" }}</td>
         <td>
           <span class="status-badge badge-{{ booking.status }}">{{ booking.get_status_display }}</span>
+          {% if booking.cancellation_requested %}
+          <br><span class="hc-cancel-flag"><i class="bi bi-exclamation-circle"></i> Cancel requested</span>
+          {% endif %}
         </td>
         <td class="text-nowrap">
           {% if booking.status == 'pending' %}
-          <form method="post" action="{% url 'vendor_approve_booking' booking.id %}" class="d-inline">
-            {% csrf_token %}
-            <input type="hidden" name="next" value="{% url 'vendor_dashboard' %}">
-            <button type="submit" class="btn btn-success btn-sm">
+            {% if booking.cancellation_requested %}
+            <button type="button" class="btn btn-success btn-sm" disabled
+                    title="Customer requested a cancellation — review before approving">
               <i class="bi bi-check-lg"></i> Approve
             </button>
-          </form>
+            {% else %}
+            <form method="post" action="{% url 'vendor_approve_booking' booking.id %}" class="d-inline">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{% url 'vendor_dashboard' %}">
+              <button type="submit" class="btn btn-success btn-sm">
+                <i class="bi bi-check-lg"></i> Approve
+              </button>
+            </form>
+            {% endif %}
           {% endif %}
           <a href="{% url 'vendor_booking_detail' booking.id %}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-eye"></i>

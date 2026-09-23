@@ -36,7 +36,14 @@
       <a href="{% url 'vendor_bookings' %}" class="btn btn-outline-secondary btn-sm ms-1">Clear</a>
       {% endif %}
     </div>
+    <input type="hidden" name="cancel_requested" value="{{ cancel_requested_filter }}">
   </form>
+  {% if cancel_requested_filter == '1' %}
+  <div class="mt-2 d-flex align-items-center gap-2">
+    <span class="hc-cancel-flag"><i class="bi bi-exclamation-circle"></i> Showing cancellation requests only</span>
+    <a href="?{% if selected_status %}status={{ selected_status }}&{% endif %}{% if selected_service %}service={{ selected_service }}&{% endif %}" class="small">Clear this filter</a>
+  </div>
+  {% endif %}
 </div>
 
 <div class="v-table-wrap">
@@ -84,18 +91,25 @@
         <td>
           <span class="status-badge badge-{{ booking.status }}">{{ booking.get_status_display }}</span>
           {% if booking.cancellation_requested %}
-          <br><span class="text-danger small"><i class="bi bi-exclamation-circle"></i> Cancel requested</span>
+          <br><span class="hc-cancel-flag"><i class="bi bi-exclamation-circle"></i> Cancel requested</span>
           {% endif %}
         </td>
         <td class="text-nowrap">
           {% if booking.status == 'pending' %}
-          <form method="post" action="{% url 'vendor_approve_booking' booking.id %}" class="d-inline">
-            {% csrf_token %}
-            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-            <button type="submit" class="btn btn-success btn-sm">
+            {% if booking.cancellation_requested %}
+            <button type="button" class="btn btn-success btn-sm" disabled
+                    title="Customer requested a cancellation — review before approving">
               <i class="bi bi-check-lg"></i> Approve
             </button>
-          </form>
+            {% else %}
+            <form method="post" action="{% url 'vendor_approve_booking' booking.id %}" class="d-inline">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="btn btn-success btn-sm">
+                <i class="bi bi-check-lg"></i> Approve
+              </button>
+            </form>
+            {% endif %}
           {% endif %}
           <a href="{% url 'vendor_booking_detail' booking.id %}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-eye"></i> Details

@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.views.decorators.http import require_POST, require_http_methods
+from django.views.decorators.http import require_POST
 
 from bookings.audit import log_booking_status_change
 from bookings.emails import send_booking_approved, send_booking_cancelled
@@ -74,10 +74,9 @@ def vendor_login_view(request):
     return render(request, 'vendors/login.html', {'form': form})
 
 
-@require_POST
 def vendor_logout_view(request):
     logout(request)
-    return redirect('home')  # Redirect to main site home, not the old vendor login page
+    return redirect('vendor_login')
 
 
 @vendor_required
@@ -116,6 +115,18 @@ def vendor_dashboard(request, vendor=None, role=None):
         .first()
     )
 
+    # Customers asking to cancel a still-active booking — needs vendor review
+    # before it can be approved or cancelled.
+    cancellation_requests_qs = (
+        Booking.objects
+        .filter(service__in=service_ids, cancellation_requested=True)
+        .exclude(status=Booking.STATUS_CANCELLED)
+        .select_related('service')
+        .order_by('-cancellation_requested_at')
+    )
+    cancel_requested_count = cancellation_requests_qs.count()
+    cancellation_requests = list(cancellation_requests_qs[:3])
+
     service_stats = []
     for service in services:
         bookings = Booking.objects.filter(service=service)
@@ -142,6 +153,8 @@ def vendor_dashboard(request, vendor=None, role=None):
         'cancelled_count': cancelled_count,
         'latest_upcoming_booking': latest_upcoming_booking,
         'latest_cancelled_booking': latest_cancelled_booking,
+        'cancellation_requests': cancellation_requests,
+        'cancel_requested_count': cancel_requested_count,
         **calendar_ctx,
     })
 
@@ -264,11 +277,14 @@ def vendor_bookings(request, vendor=None, role=None):
 
     selected_status = request.GET.get('status', '')
     selected_service = request.GET.get('service', '')
+    cancel_requested_filter = request.GET.get('cancel_requested', '')
 
     if selected_status:
         bookings_qs = bookings_qs.filter(status=selected_status)
     if selected_service:
         bookings_qs = bookings_qs.filter(service_id=selected_service)
+    if cancel_requested_filter == '1':
+        bookings_qs = bookings_qs.filter(cancellation_requested=True)
 
     return render(request, 'vendors/bookings.html', {
         'vendor': vendor,
@@ -278,6 +294,7 @@ def vendor_bookings(request, vendor=None, role=None):
         'status_choices': Booking.STATUS_CHOICES,
         'selected_status': selected_status,
         'selected_service': selected_service,
+        'cancel_requested_filter': cancel_requested_filter,
     })
 
 
@@ -301,6 +318,12 @@ def vendor_approve_booking(request, booking_id, vendor=None, role=None):
 
     if booking.status != Booking.STATUS_PENDING:
         messages.error(request, f'Booking {booking.confirmation_number} is not pending approval.')
+    elif booking.cancellation_requested:
+        messages.error(
+            request,
+            f'Booking {booking.confirmation_number} has a pending cancellation request from the customer — '
+            'review it before approving.',
+        )
     else:
         booking.status = Booking.STATUS_CONFIRMED
         booking.save(update_fields=['status', 'updated_at'])
