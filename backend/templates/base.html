@@ -10,14 +10,18 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   {% load static local_names %}
-  <link href="{% static 'css/main.css' %}?v=1.2" rel="stylesheet">
-  <link href="{% static 'css/auth.css' %}?v=1.2" rel="stylesheet">
+  <link href="{% static 'css/main.css' %}?v=1.4" rel="stylesheet">
+  <link href="{% static 'css/auth.css' %}?v=1.4" rel="stylesheet">
   {% block extra_head %}{% endblock %}
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg">
-  <div class="container">
+{# ── Resolve current URLs once, used below to mark the active nav item ── #}
+{% url 'service_list' as all_services_url %}
+{% url 'booking_lookup' as booking_lookup_url %}
+
+<nav class="navbar navbar-expand-xl">
+  <div class="container-fluid px-3 px-xl-4">
     <a class="navbar-brand" href="{% url 'home' %}">
       <span class="brand-icon"><img src="{% static 'img/AnyBookingMainLogo.jpg' %}" alt="AnyBooking logo"></span>
       AnyBooking
@@ -27,14 +31,17 @@
     </button>
     <div class="collapse navbar-collapse" id="navMain">
       <ul class="navbar-nav me-auto">
-        <li class="nav-item"><a class="nav-link" href="{% url 'service_list' %}">All Services</a></li>
-        {% for cat in nav_categories %}
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'service_list_by_category' cat.slug %}">{{ cat|local_cat_name:request }}</a>
+          <a class="nav-link{% if request.path == all_services_url %} active{% endif %}" href="{{ all_services_url }}">All Services</a>
+        </li>
+        {% for cat in nav_categories %}
+        {% url 'service_list_by_category' cat.slug as cat_url %}
+        <li class="nav-item">
+          <a class="nav-link{% if request.path == cat_url %} active{% endif %}" href="{{ cat_url }}">{{ cat|local_cat_name:request }}</a>
         </li>
         {% endfor %}
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'booking_lookup' %}">
+          <a class="nav-link{% if request.path == booking_lookup_url %} active{% endif %}" href="{{ booking_lookup_url }}">
             <i class="bi bi-search"></i> Find My Booking
           </a>
         </li>
@@ -45,7 +52,7 @@
         {% if pref_country %}
         <span class="location-badge">
           <i class="bi bi-geo-alt-fill"></i>
-          {% if pref_state %}{{ pref_state.name }}, {% endif %}{{ pref_country.name }}
+          <span class="location-badge-text">{% if pref_state %}{{ pref_state.name }}, {% endif %}{{ pref_country.name }}</span>
         </span>
         <button class="btn btn-link btn-sm text-muted p-0 ms-2 change-location-btn" style="font-size:.75rem" onclick="openLocationModal()">
           Change

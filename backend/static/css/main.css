@@ -112,6 +112,11 @@ body {
 }
 
 /* ── Navbar ─────────────────────────────────────────────────────────────── */
+html,
+body {
+  overflow-x: hidden;
+}
+
 .navbar {
   background: #fff7ed;
   border-bottom: 1px solid var(--border);
@@ -127,6 +132,8 @@ body {
   font-size: 1.1rem;
   color: var(--text-primary);
   letter-spacing: -0.3px;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .navbar-brand .brand-icon {
@@ -152,34 +159,110 @@ body {
 .navbar .container-fluid {
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* On the collapse breakpoint and below, let the container wrap normally
+   so the toggler + collapsed menu behave the standard Bootstrap way. */
+@media (max-width: 1199.98px) {
+  .navbar .container,
+  .navbar .container-fluid {
+    flex-wrap: wrap;
+  }
 }
 
 .navbar .navbar-collapse {
   align-items: center;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .navbar .navbar-nav {
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+
+/* Safety-net: at xl+ widths the bar should always fit in one line without
+   any scrolling. But if a viewport lands in an awkward in-between size
+   where the links genuinely don't fit, scroll *inside* the links list
+   itself instead of letting content overflow the page. Scoped to just
+   .navbar-nav (not the whole collapse) so the Sign-in / account dropdown,
+   which lives outside this list, is never clipped by the scroll container. */
+@media (min-width: 1200px) {
+  .navbar .navbar-nav {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    max-width: 100%;
+  }
+  .navbar .navbar-nav::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .navbar .nav-item {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .navbar .nav-link {
   color: var(--text-secondary) !important;
   font-weight: 500;
-  font-size: .9rem;
+  font-size: .87rem;
   display: inline-flex;
   align-items: center;
   gap: 5px;
   line-height: 1.5;
+  white-space: nowrap;
+  padding: 8px 10px !important;
+  position: relative;
+  transition: color .15s ease;
 }
 
 .navbar .nav-link:hover {
-  color: var(--text-primary);
+  color: var(--primary-dark) !important;
+}
+
+/* Underline that grows in on hover, and stays on for the active page */
+.navbar .nav-link::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 3px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--primary);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform .2s ease, background-color .2s ease;
+}
+
+.navbar .nav-link:hover::after {
+  transform: scaleX(1);
+}
+
+.navbar .nav-link.active {
+  color: var(--primary-dark) !important;
+  font-weight: 700;
+}
+
+.navbar .nav-link.active::after {
+  transform: scaleX(1);
+  background: var(--primary-dark);
+}
+
+/* On viewports below xl the menu collapses into the toggler, so let text
+   wrap normally there instead of forcing a single line. */
+@media (max-width: 1199.98px) {
+  .navbar .nav-link {
+    white-space: normal;
+  }
 }
 
 .location-badge {
@@ -193,6 +276,15 @@ body {
   align-items: center;
   gap: 6px;
   line-height: 1.4;
+  white-space: nowrap;
+  max-width: 220px;
+}
+
+.location-badge-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
 }
 
 .btn-admin-cta {
@@ -207,6 +299,21 @@ body {
 
 .btn-admin-cta:hover {
   background: var(--primary-dark);
+}
+
+/* Keep the signed-in user's name from blowing up the navbar width */
+.auth-nav-username {
+  display: inline-block;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.auth-nav-avatar-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* ── Hero ───────────────────────────────────────────────────────────────── */
@@ -249,14 +356,14 @@ body {
   background-size: cover;
   background-position: center;
   opacity: 0;
-  transform: translateX(40px);
+  transform: scale(1.08);
   transition:
-    opacity 1.2s ease-in-out,
-    transform 1.2s ease-in-out;
+    opacity 1.8s ease-in-out,
+    transform 2.5s ease-in-out;
 }
 .hero-slide-fade.is-active {
   opacity: 1;
-  transform: translateX(0);
+  transform: scale(1);
 }
 
 .hero-overlay {
