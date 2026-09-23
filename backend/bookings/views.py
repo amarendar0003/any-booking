@@ -132,6 +132,33 @@ def booking_lookup(request):
     })
 
 
+def customer_my_bookings(request):
+    """All bookings (any status) placed with the email address on this
+    account. Requires a signed-in user — the navbar only links here once
+    request.user.is_authenticated, but this guards direct URL access too.
+    """
+    if not request.user.is_authenticated:
+        messages.info(request, 'Please sign in to view your bookings.')
+        return redirect('home')
+
+    email = request.user.email
+    bookings = []
+    if email:
+        bookings = list(
+            Booking.objects
+            .filter(customer_email__iexact=email)
+            .select_related('service', 'service__city')
+            .order_by('-created_at')
+        )
+
+    display_name = request.user.get_full_name() or request.user.email
+
+    return render(request, 'bookings/my_bookings.html', {
+        'bookings': bookings,
+        'customer_name': display_name,
+    })
+
+
 def booking_cancel_request(request, confirmation_number):
     """Customer-initiated cancellation request for an active booking."""
     from django.utils import timezone
