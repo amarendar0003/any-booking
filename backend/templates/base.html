@@ -213,10 +213,10 @@
     const sel = document.getElementById('modal-state');
     sel.innerHTML = '<option value="">All states</option>';
     if (!countryId) return;
-    const r = await fetch(${ajaxUrl}?kind=states&parent_id=${countryId});
+    const r = await fetch(`${ajaxUrl}?kind=states&parent_id=${countryId}`);
     const d = await r.json();
     d.results.forEach(s => {
-      sel.innerHTML += <option value="${s.id}" ${s.id == preselectStateId ? 'selected' : ''}>${s.name}</option>;
+      sel.innerHTML += `<option value="${s.id}" ${s.id == preselectStateId ? 'selected' : ''}>${s.name}</option>`;
     });
   };
 
@@ -277,9 +277,7 @@
       const country_code = geo.country_code || '';
       const state_name = geo.region || '';
       if (!country_code) throw new Error('no country');
-      const match = await fetch(
-        ${ajaxUrl}?kind=match&country_code=${encodeURIComponent(country_code)}&state_name=${encodeURIComponent(state_name)}
-      ).then(r => r.json());
+      const match = await fetch(`        ${ajaxUrl}?kind=match&country_code=${encodeURIComponent(country_code)}&state_name=${encodeURIComponent(state_name)}`).then(r => r.json());
       if (!match.country_id) {
         status.textContent = "Your region isn't in our database yet — please select manually.";
         btn.disabled = false;
@@ -287,7 +285,7 @@
       }
       document.getElementById('modal-country').value = match.country_id;
       await modalLoadStates(match.country_id, match.state_id || '');
-      status.innerHTML = <span class="text-success"><i class="bi bi-check-circle-fill"></i> Detected: ${match.country_name}${match.state_name ? ', ' + match.state_name : ''}</span>;
+      status.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill"></i> Detected: ${match.country_name}${match.state_name ? ', ' + match.state_name : ''}</span>`;
     } catch (e) {
       status.textContent = 'Detection failed — please select manually.';
     }
