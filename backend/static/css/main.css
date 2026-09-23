@@ -117,6 +117,18 @@ body {
   overflow-x: hidden;
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
+/* Bootstrap adds padding-right to <body> when a modal opens, to compensate
+   for the scrollbar it hides. Since scrollbar-gutter: stable above already
+   keeps that space reserved at all times, this compensation is no longer
+   needed and was the cause of the page shifting/gapping on open — cancel it. */
+body.modal-open {
+  padding-right: 0 !important;
+}
+
 .navbar {
   background: #fff7ed;
   border-bottom: 1px solid var(--border);
@@ -301,14 +313,17 @@ body {
   background: var(--primary-dark);
 }
 
-/* Keep the signed-in user's name from blowing up the navbar width */
-.auth-nav-username {
-  display: inline-block;
-  max-width: 140px;
+/* Full email is shown inside the opened dropdown (see .auth-nav-dropdown-email
+   below) — the nav button itself is just an avatar + chevron on every
+   screen size, so there's no name/email text here left to truncate. */
+.auth-nav-dropdown-email {
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  vertical-align: middle;
+  max-width: 260px;
 }
 
 .auth-nav-avatar-btn {
@@ -356,14 +371,14 @@ body {
   background-size: cover;
   background-position: center;
   opacity: 0;
-  transform: scale(1.08);
+  transform: translateX(40px);
   transition:
-    opacity 1.8s ease-in-out,
-    transform 2.5s ease-in-out;
+    opacity 1.2s ease-in-out,
+    transform 1.2s ease-in-out;
 }
 .hero-slide-fade.is-active {
   opacity: 1;
-  transform: scale(1);
+  transform: translateX(0);
 }
 
 .hero-overlay {

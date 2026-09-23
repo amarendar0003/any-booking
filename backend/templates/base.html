@@ -10,8 +10,8 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   {% load static local_names %}
-  <link href="{% static 'css/main.css' %}?v=1.4" rel="stylesheet">
-  <link href="{% static 'css/auth.css' %}?v=1.4" rel="stylesheet">
+  <link href="{% static 'css/main.css' %}?v=1.7" rel="stylesheet">
+  <link href="{% static 'css/auth.css' %}?v=1.7" rel="stylesheet">
   {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -69,16 +69,17 @@
       <div class="auth-nav-user dropdown">
         <button class="auth-nav-avatar-btn dropdown-toggle" type="button"
                 data-bs-toggle="dropdown" aria-expanded="false"
-                id="userNavMenu">
+                id="userNavMenu" title="{{ request.user.email }}">
           <span class="auth-nav-avatar">
             {{ request.user.email|slice:':1'|upper }}
-          </span>
-          <span class="auth-nav-username d-none d-sm-inline">
-            {{ request.user.first_name|default:request.user.email|slice:':20' }}
           </span>
           <i class="bi bi-chevron-down" style="font-size:.7rem"></i>
         </button>
         <ul class="dropdown-menu dropdown-menu-end auth-nav-dropdown">
+          <li class="auth-nav-dropdown-email px-3 py-2 text-truncate" title="{{ request.user.email }}">
+            {{ request.user.email }}
+          </li>
+          <li><hr class="dropdown-divider"></li>
           {% if request.user.profile.role == 'vendor' %}
           <li><a class="dropdown-item" href="/vendor/dashboard/">
             <i class="bi bi-shop me-2"></i>Vendor Dashboard</a></li>
