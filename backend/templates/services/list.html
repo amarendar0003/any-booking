@@ -7,42 +7,68 @@
 {# ── Page header ───────────────────────────────────────────────────────── #}
 <div class="list-header">
   <div class="container">
-    <nav aria-label="breadcrumb" class="mb-2">
-      <ol class="breadcrumb mb-0" style="font-size:.8rem">
-        <li class="breadcrumb-item"><a href="{% url 'home' %}" style="color:#7dd3fc;text-decoration:none">Home</a></li>
-        {% if category %}
-          <li class="breadcrumb-item"><a href="{% url 'service_list' %}" style="color:#7dd3fc;text-decoration:none">Services</a></li>
-          <li class="breadcrumb-item active" style="color:rgba(255,255,255,.65)">{{ category|local_cat_name:request }}</li>
-        {% else %}
-          <li class="breadcrumb-item active" style="color:rgba(255,255,255,.65)">All Services</li>
-        {% endif %}
-      </ol>
-    </nav>
-    <h1>
-      {% if category %}
-        {% if category.slug == 'banquet_hall' %}🏛️
-        {% elif category.slug == 'music_band' %}🎸
-        {% elif category.slug == 'catering' %}🍽️
-        {% elif category.slug == 'hotels' %}🏨
-        {% elif category.slug == 'dancing' %}💃
-        {% elif category.slug == 'priests' %}🪔
-        {% elif category.slug == 'event_management' %}🎪
-        {% endif %}
-        {{ category|local_cat_name:request }}
-      {% else %}
-        All Services
-      {% endif %}
-    </h1>
-    <p class="list-sub mb-0">{{ services.count }} result{{ services.count|pluralize }} found</p>
+    <div class="list-header-row">
+
+      {# Left: breadcrumb path, with result count just below it #}
+      <div class="list-header-left">
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb" style="font-size:.8rem">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}" style="color:#0774a7;text-decoration:none">Home</a></li>
+            {% if category %}
+              <li class="breadcrumb-item"><a href="{% url 'service_list' %}" style="color:#0774a7;text-decoration:none">Services</a></li>
+              <li class="breadcrumb-item active" style="color:#ffffff">{{ category|local_cat_name:request }}</li>
+            {% else %}
+              <li class="breadcrumb-item active" style="color:#ffffff">All Services</li>
+            {% endif %}
+          </ol>
+        </nav>
+        <!-- <p class="list-header-count">{{ services.count }} result{{ services.count|pluralize }} found</p> -->
+      </div>
+
+      {# Center: category icon + name #}
+      <div class="list-header-center">
+        <span class="list-header-icon">
+          {% if category %}
+            {% if category.slug == 'banquet_hall' %}🏛️
+            {% elif category.slug == 'music_band' %}🎸
+            {% elif category.slug == 'catering' %}🍽️
+            {% elif category.slug == 'hotels' %}🏨
+            {% elif category.slug == 'dancing' %}💃
+            {% elif category.slug == 'priests' %}🪔
+            {% elif category.slug == 'event_management' %}🎪
+            {% endif %}
+          {% else %}✨{% endif %}
+        </span>
+        <h1>
+          {% if category %}{{ category|local_cat_name:request }}{% else %}All Services{% endif %}
+        </h1>
+      </div>
+
+      {# Right: empty spacer so the center column is truly centered on the bar #}
+      <div class="list-header-right"></div>
+
+    </div>
   </div>
 </div>
 
 {# ── Search strip ──────────────────────────────────────────────────────── #}
 <div class="search-strip">
   <div class="container">
-    <form method="get" id="filter-form" class="d-flex flex-wrap gap-2 align-items-center">
+    <form method="get" id="filter-form" class="d-flex flex-nowrap gap-2 align-items-center">
       {% if category %}<input type="hidden" name="category" value="{{ category.slug }}">{% endif %}
       <input name="q" class="form-control" style="max-width:220px" placeholder="Search…" value="{{ q }}">
+      <select name="country" id="f-country" class="form-select" style="max-width:160px" onchange="filterStates(this.value)">
+        <option value="">All Countries</option>
+        {% for c in pref_countries %}
+        <option value="{{ c.id }}" {% if selected_country == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+      <select name="state" id="f-state" class="form-select" style="max-width:160px" onchange="filterDistricts(this.value)">
+        <option value="">All States</option>
+        {% for s in states %}
+        <option value="{{ s.id }}" {% if selected_state == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
       <select name="district" id="f-district" class="form-select" style="max-width:160px" onchange="filterCities(this.value)">
         <option value="">All Districts</option>
         {% for d in districts %}
@@ -202,6 +228,7 @@
 {% block extra_js %}
 <script>
 const ajaxUrl = "{% url 'location_ajax' %}";
+
 async function loadOpts(kind, parentId, targetId, label) {
   const sel = document.getElementById(targetId);
   const cur = sel.value;
@@ -213,6 +240,27 @@ async function loadOpts(kind, parentId, targetId, label) {
     sel.innerHTML += `<option value="${i.id}" ${i.id == cur ? 'selected' : ''}>${i.name}</option>`;
   });
 }
-function filterCities(id) { loadOpts('cities', id, 'f-city', 'Cities'); }
+
+function resetSelect(targetId, label) {
+  document.getElementById(targetId).innerHTML = `<option value="">All ${label}</option>`;
+}
+
+// Country → States, and clear the now-stale District/City below it
+function filterStates(countryId) {
+  loadOpts('states', countryId, 'f-state', 'States');
+  resetSelect('f-district', 'Districts');
+  resetSelect('f-city', 'Cities');
+}
+
+// State → Districts, and clear the now-stale City below it
+function filterDistricts(stateId) {
+  loadOpts('districts', stateId, 'f-district', 'Districts');
+  resetSelect('f-city', 'Cities');
+}
+
+// District → Cities
+function filterCities(districtId) {
+  loadOpts('cities', districtId, 'f-city', 'Cities');
+}
 </script>
 {% endblock %}
