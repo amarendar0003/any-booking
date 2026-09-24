@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}About Us{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── About page (all styles scoped to .ab-*, main.css untouched) ─────────── */
+.ab-section { padding: 76px 0; }
+.ab-h2 { font-size: 2rem; font-weight: 800; letter-spacing: -.8px; color: var(--text-primary); margin-bottom: 14px; }
+.ab-lead { color: var(--text-secondary); font-size: 1.02rem; line-height: 1.75; max-width: 560px; }
+
+/* Hero */
+.ab-hero {
+  position: relative;
+  min-height: 540px;
+  display: flex;
+  align-items: center;
+  background:
+    linear-gradient(90deg, rgba(67,20,7,.88) 0%, rgba(67,20,7,.55) 48%, rgba(67,20,7,.12) 100%),
+    url('{% static "img/About_us_mainimage.png" %}') center/cover no-repeat;
+  color: #fff;
+}
+.ab-hero h1 {
+  font-size: 3.2rem; font-weight: 900; letter-spacing: -1.6px; line-height: 1.08;
+  max-width: 640px; margin-bottom: 18px;
+  text-shadow: 0 2px 12px rgba(0,0,0,.5);
+}
+.ab-hero p { font-size: 1.1rem; max-width: 520px; color: rgba(255,255,255,.92); margin-bottom: 30px; text-shadow: 0 1px 8px rgba(0,0,0,.5); }
+.ab-btn-ghost {
+  display: inline-flex; align-items: center; padding: 10px 24px; border-radius: 12px;
+  border: 1.5px solid rgba(255,255,255,.65); color: #fff; font-weight: 600; text-decoration: none;
+  background: rgba(255,255,255,.08); transition: background .2s;
+}
+.ab-btn-ghost:hover { background: rgba(255,255,255,.2); color: #fff; }
+.ab-hero .btn-primary { padding: 10px 26px; border-radius: 12px; }
+
+/* Story */
+.ab-story-media { position: relative; padding: 0 22px 22px 0; }
+.ab-story-media::before {
+  content: ""; position: absolute; right: 0; bottom: 0; width: 82%; height: 82%;
+  background: var(--border); border-radius: 26px 6px 26px 6px; z-index: 0;
+}
+.ab-story-media img {
+  position: relative; z-index: 1; width: 100%; height: 400px; object-fit: cover;
+  border-radius: 6px 26px 6px 26px; display: block;
+  box-shadow: 0 22px 44px -18px rgba(67,20,7,.45);
+}
+.ab-logo-chip {
+  position: absolute; z-index: 2; left: -14px; bottom: 6px; width: 92px; height: 92px;
+  border-radius: 50%; border: 4px solid var(--bg-page); background: #fff; overflow: hidden;
+  box-shadow: 0 10px 24px rgba(67,20,7,.3);
+}
+.ab-logo-chip img { width: 100%; height: 100%; object-fit: cover; border-radius: 0; box-shadow: none; }
+.ab-story p { color: var(--text-secondary); line-height: 1.8; margin-bottom: 14px; }
+.ab-story .ab-pull {
+  border-left: 4px solid var(--primary); padding: 4px 0 4px 16px; margin-top: 22px;
+  font-weight: 700; font-size: 1.08rem; color: var(--primary-dark);
+}
+
+/* Facts strip */
+.ab-facts { background: #fff7ed; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.ab-fact { text-align: center; padding: 34px 12px; }
+.ab-fact + .ab-fact { border-left: 1px solid var(--border); }
+.ab-fact-num { font-size: 2.6rem; font-weight: 900; letter-spacing: -1.5px; color: var(--primary); line-height: 1; }
+.ab-fact-label { margin-top: 8px; font-size: .86rem; color: var(--text-secondary); font-weight: 500; }
+
+/* What you can book */
+.ab-cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 36px; margin-top: 34px; }
+.ab-cat { display: flex; gap: 16px; align-items: flex-start; padding: 18px 0; border-bottom: 1px dashed var(--border); }
+.ab-cat-ico {
+  flex: 0 0 52px; height: 52px; border-radius: 16px 16px 16px 4px; background: #ffedd5;
+  display: flex; align-items: center; justify-content: center; font-size: 1.6rem;
+}
+.ab-cat h3 { font-size: 1.02rem; font-weight: 700; margin: 2px 0 4px; color: var(--text-primary); }
+.ab-cat p { font-size: .87rem; color: var(--text-secondary); margin: 0; line-height: 1.55; }
+
+/* Why us (dark band, the one bold moment) */
+.ab-why { background: linear-gradient(150deg, #431407 0%, #7c2d12 100%); color: #fff; }
+.ab-why .ab-h2 { color: #fff; }
+.ab-why .ab-lead { color: rgba(255,237,213,.85); }
+.ab-why-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px 44px; margin-top: 46px; }
+.ab-why-item i { font-size: 1.7rem; color: #ffd166; display: block; margin-bottom: 12px; }
+.ab-why-item h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; }
+.ab-why-item p { font-size: .9rem; color: rgba(255,237,213,.8); line-height: 1.65; margin: 0; }
+
+/* How it works (a real sequence, so numbered) */
+.ab-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: 44px; position: relative; }
+.ab-steps::before {
+  content: ""; position: absolute; top: 24px; left: 12%; right: 12%; height: 2px;
+  background: repeating-linear-gradient(90deg, var(--border) 0 8px, transparent 8px 16px);
+}
+.ab-step { position: relative; text-align: center; padding: 0 8px; }
+.ab-step-n {
+  position: relative; width: 50px; height: 50px; margin: 0 auto 14px; border-radius: 50%;
+  background: var(--primary); color: #fff; font-weight: 800; font-size: 1.1rem;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 0 6px var(--bg-page);
+}
+.ab-step h3 { font-size: 1rem; font-weight: 700; margin-bottom: 5px; }
+.ab-step p { font-size: .86rem; color: var(--text-secondary); margin: 0; line-height: 1.55; }
+
+/* Closing call to action */
+.ab-cta {
+  border-radius: 28px 8px 28px 8px; padding: 52px 40px; text-align: center; color: #fff;
+  background:
+    linear-gradient(140deg, rgba(154,52,18,.94), rgba(234,88,12,.9)),
+    url('{% static "img/Mandap11.jpg" %}') center/cover;
+  box-shadow: 0 26px 50px -22px rgba(124,45,18,.6);
+}
+.ab-cta h2 { font-size: 2rem; font-weight: 800; letter-spacing: -.8px; margin-bottom: 10px; }
+.ab-cta p { color: rgba(255,255,255,.92); max-width: 520px; margin: 0 auto 26px; }
+.ab-cta .ab-btn-solid {
+  display: inline-block; background: #fff; color: var(--primary-dark); font-weight: 700;
+  padding: 11px 28px; border-radius: 12px; text-decoration: none; margin: 4px 6px;
+  transition: transform .2s;
+}
+.ab-cta .ab-btn-solid:hover { transform: translateY(-2px); color: var(--primary-dark); }
+.ab-cta .ab-btn-ghost { margin: 4px 6px; }
+
+/* Responsive */
+@media (max-width: 992px) {
+  .ab-cat-grid, .ab-why-grid { grid-template-columns: repeat(2, 1fr); }
+  .ab-steps { grid-template-columns: repeat(2, 1fr); row-gap: 34px; }
+  .ab-steps::before { display: none; }
+  .ab-fact:nth-child(3) { border-left: 0; }
+  .ab-fact:nth-child(n+3) { border-top: 1px solid var(--border); }
+}
+@media (max-width: 576px) {
+  .ab-section { padding: 52px 0; }
+  .ab-hero { min-height: 460px; }
+  .ab-hero h1 { font-size: 2.1rem; letter-spacing: -1px; }
+  .ab-h2, .ab-cta h2 { font-size: 1.6rem; }
+  .ab-cat-grid, .ab-why-grid, .ab-steps { grid-template-columns: 1fr; }
+  .ab-story-media img { height: 280px; }
+  .ab-cta { padding: 38px 22px; }
+  .ab-fact { padding: 24px 8px; }
+  .ab-fact-num { font-size: 2rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Hero ── #}
+<section class="ab-hero">
+  <div class="container">
+    <h1>Every celebration deserves a venue that fits.</h1>
+    <p>AnyBooking brings halls, bands, caterers, hotels and more into one place, so planning your event takes an afternoon, not weeks of phone calls.</p>
+    <a href="{% url 'service_list' %}" class="btn btn-primary">Browse services</a>
+    <a href="/contact/" class="ab-btn-ghost ms-2">Contact us</a>
+  </div>
+</section>
+
+{# ── Story ── #}
+<section class="ab-section">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-6">
+        <div class="ab-story-media">
+          <img src="{% static 'img/banquet_hall.png' %}" alt="A decorated wedding mandap">
+          <span class="ab-logo-chip"><img src="{% static 'img/AnyBookingMainLogo.jpg' %}" alt="AnyBooking logo"></span>
+        </div>
+      </div>
+      <div class="col-lg-6 ab-story">
+        <h2 class="ab-h2">Why we built AnyBooking</h2>
+        <p>Booking a wedding hall or a band used to mean calling around, waiting for callbacks and never quite knowing which dates were really free. Prices were unclear, and it was hard to tell which vendors you could trust.</p>
+        <p>We built AnyBooking to fix that. Every vendor is reviewed before they go live. Every listing shows real availability. You choose your date, send your request and get a confirmation number by email.</p>
+        <p class="ab-pull">One platform for the whole event, from the first search to the last dance.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ── Facts ── #}
+<section class="ab-facts">
+  <div class="container">
+    <div class="row g-0">
+      <div class="col-6 col-lg-3 ab-fact"><div class="ab-fact-num">7</div><div class="ab-fact-label">Service categories</div></div>
+      <div class="col-6 col-lg-3 ab-fact"><div class="ab-fact-num">4</div><div class="ab-fact-label">Location levels, country to city</div></div>
+      <div class="col-6 col-lg-3 ab-fact"><div class="ab-fact-num">Live</div><div class="ab-fact-label">Availability calendar on every listing</div></div>
+      <div class="col-6 col-lg-3 ab-fact"><div class="ab-fact-num">100%</div><div class="ab-fact-label">Reviews checked before they appear</div></div>
+    </div>
+  </div>
+</section>
+
+{# ── What you can book ── #}
+<section class="ab-section">
+  <div class="container">
+    <h2 class="ab-h2">Everything your event needs</h2>
+    <p class="ab-lead">Book one service or build the whole event around it. These are the seven things you can find on AnyBooking today.</p>
+    <div class="ab-cat-grid">
+      <div class="ab-cat"><span class="ab-cat-ico">🏛️</span><div><h3>Banquet halls</h3><p>Halls for weddings, receptions, engagements and birthdays, filtered by capacity and AC.</p></div></div>
+      <div class="ab-cat"><span class="ab-cat-ico">🎸</span><div><h3>Music bands</h3><p>Live bands and performers to set the mood for your evening.</p></div></div>
+      <div class="ab-cat"><span class="ab-cat-ico">🍽️</span><div><h3>Catering</h3><p>Caterers with veg and non-veg options, priced the way you plan your guest list.</p></div></div>
+      <div class="ab-cat"><span class="ab-cat-ico">🏨</span><div><h3>Hotels</h3><p>Rooms and stays for you and your guests, close to the venue.</p></div></div>
+      <div class="ab-cat"><span class="ab-cat-ico">💃</span><div><h3>Dancing</h3><p>Choreographers and dance acts for sangeet nights and receptions.</p></div></div>
+      <div class="ab-cat"><span class="ab-cat-ico">🪔</span><div><h3>Priests</h3><p>Priests for ceremonies, listed under the name your region uses, such as Purohit or Pandit.</p></div></div>
+      <div class="ab-cat"><span class="ab-cat-ico">🎪</span><div><h3>Event management</h3><p>Planners who run the day so you can enjoy it.</p></div></div>
+    </div>
+  </div>
+</section>
+
+{# ── Why AnyBooking ── #}
+<section class="ab-section ab-why">
+  <div class="container">
+    <h2 class="ab-h2">What you can count on</h2>
+    <p class="ab-lead">We keep the promises that matter most when a date and a budget are on the line.</p>
+    <div class="ab-why-grid">
+      <div class="ab-why-item"><i class="bi bi-patch-check-fill"></i><h3>Verified vendors</h3><p>Each vendor is reviewed by our team before their listing goes live.</p></div>
+      <div class="ab-why-item"><i class="bi bi-calendar2-check-fill"></i><h3>No double bookings</h3><p>Dates that are already booked or blocked can't be picked, so the date you choose is really yours.</p></div>
+      <div class="ab-why-item"><i class="bi bi-shield-lock-fill"></i><h3>Secure advance payment</h3><p>Pay your advance online through Razorpay, with UPI, cards and net banking.</p></div>
+      <div class="ab-why-item"><i class="bi bi-geo-alt-fill"></i><h3>Local to where you are</h3><p>Browse by country, state, district and city. Category names follow local usage, so you see words you know.</p></div>
+      <div class="ab-why-item"><i class="bi bi-star-fill"></i><h3>Reviews you can trust</h3><p>Every rating and review is checked by our team before it is published.</p></div>
+      <div class="ab-why-item"><i class="bi bi-envelope-check-fill"></i><h3>Updates at every step</h3><p>You get an email when your request is received, approved or cancelled, and you can look up a booking any time with your confirmation number.</p></div>
+    </div>
+  </div>
+</section>
+
+{# ── How it works ── #}
+<section class="ab-section">
+  <div class="container">
+    <h2 class="ab-h2 text-center">Booking in four steps</h2>
+    <p class="ab-lead text-center mx-auto">From first search to confirmed date.</p>
+    <div class="ab-steps">
+      <div class="ab-step"><div class="ab-step-n">1</div><h3>Search</h3><p>Pick a category and city, then filter by the things that matter to you.</p></div>
+      <div class="ab-step"><div class="ab-step-n">2</div><h3>Choose a date</h3><p>Check the live calendar and send your booking request.</p></div>
+      <div class="ab-step"><div class="ab-step-n">3</div><h3>Get confirmed</h3><p>We review your request and email you a confirmation number.</p></div>
+      <div class="ab-step"><div class="ab-step-n">4</div><h3>Celebrate</h3><p>Show up on the day. The vendor takes care of the rest.</p></div>
+    </div>
+  </div>
+</section>
+
+{# ── Closing call to action ── #}
+<section class="pb-5">
+  <div class="container">
+    <div class="ab-cta">
+      <h2>Ready to plan your event?</h2>
+      <p>Explore verified venues and services near you, or write to us if you'd like help choosing.</p>
+      <a href="{% url 'service_list' %}" class="ab-btn-solid">Browse services</a>
+      <a href="/contact/" class="ab-btn-ghost">Contact us</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
