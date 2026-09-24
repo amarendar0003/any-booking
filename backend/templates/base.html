@@ -17,6 +17,7 @@
 <body>
 
 {# ── Resolve current URLs once, used below to mark the active nav item ── #}
+{% url 'home' as home_url %}
 {% url 'service_list' as all_services_url %}
 {% url 'booking_lookup' as booking_lookup_url %}
 {% url 'customer_my_bookings' as my_bookings_url %}
@@ -31,16 +32,27 @@
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navMain">
-      <ul class="navbar-nav me-auto">
+      <ul class="navbar-nav mx-xl-auto">
         <li class="nav-item">
-          <a class="nav-link{% if request.path == all_services_url %} active{% endif %}" href="{{ all_services_url }}">All Services</a>
+          <a class="nav-link{% if request.path == home_url %} active{% endif %}" href="{{ home_url }}">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link{% if request.path == all_services_url %} active{% endif %}" href="{{ all_services_url }}">Services</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link{% if request.path == '/about/' %} active{% endif %}" href="/about/">About Us</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link{% if request.path == '/contact/' %} active{% endif %}" href="/contact/">Contact Us</a>
         </li>
         {% for cat in nav_categories %}
-        {% url 'service_list_by_category' cat.slug as cat_url %}
-        <li class="nav-item">
-          <a class="nav-link{% if request.path == cat_url %} active{% endif %}" href="{{ cat_url }}">{{ cat|local_cat_name:request }}</a>
-        </li>
-        {% endfor %}
+          {% if cat.slug != 'catering' and cat.slug != 'event_management' and cat.slug != 'priests' and cat.slug != 'banquet_hall' and cat.slug != 'music_band' and cat.slug != 'hotels' and cat.slug != 'dancing'    %}
+          {% url 'service_list_by_category' cat.slug as cat_url %}
+          <li class="nav-item">
+            <a class="nav-link{% if request.path == cat_url %} active{% endif %}" href="{{ cat_url }}">{{ cat|local_cat_name:request }}</a>
+          </li>
+          {% endif %}
+          {% endfor %}
         <li class="nav-item">
           {% if request.user.is_authenticated %}
           <a class="nav-link{% if request.path == my_bookings_url %} active{% endif %}" href="{{ my_bookings_url }}">

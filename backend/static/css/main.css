@@ -399,6 +399,9 @@ body.modal-open {
 }
 
 /* ── Hero top ribbon ─────────────────────────────────────────────────────── */
+/* ── Hero top ribbon ─────────────────────────────────────────────────────── */
+/* Replace ONLY this block in main.css (everything else stays the same). */
+
 .hero-ribbon {
   position: absolute;
   top: 0;
@@ -410,17 +413,18 @@ body.modal-open {
   justify-content: center;
   gap: 12px;
   padding: 9px 16px;
-  background: rgba(67,20,7,.35);
+  background: rgba(0, 0, 0, 0.349);
   border-bottom: 1px solid rgba(255,255,255,.16);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
-  color: #ffedd5;
+  color: #ffffff;                             
+  text-shadow: 0 1px 3px rgba(0,0,0,.6);       
   font-size: .68rem;
   font-weight: 700;
   letter-spacing: 2px;
   text-transform: uppercase;
 }
-.hero-ribbon-diamond { color: var(--accent); font-size: .7rem; }
+.hero-ribbon-diamond { color: #ffd166; font-size: .7rem; }   /* CHANGED: diamonds (was var(--accent)) */
 @media (max-width: 768px) { .hero-ribbon { display: none; } }
 
 /* ── Hero content ────────────────────────────────────────────────────────── */
@@ -442,23 +446,46 @@ body.modal-open {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+/* ── Hero eyebrow (translucent card) ─────────────────────────────────────── */
+/* Replace ONLY the existing .hero-eyebrow block in main.css with this one.
+   .hero-eyebrow-line rules stay exactly as they are.                        */
 
 .hero-eyebrow {
-  display: inline-flex;
+  display: inline-flex;                 /* card hugs its content only, not full width */
   align-items: center;
   gap: 14px;
-  color: var(--accent);
+  color: #ffffff;
   font-size: .72rem;
   font-weight: 800;
   letter-spacing: 2.5px;
   text-transform: uppercase;
   margin-bottom: 16px;
   text-shadow: 0 1px 3px rgba(0,0,0,.85), 0 2px 10px rgba(0,0,0,.5);
+
+  /* NEW: translucent card */
+  background: rgba(67, 20, 7, .38);
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 999px;
+  padding: 8px 22px;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .18);
+}
+
+/* NEW: keeps the card comfortable on small screens */
+@media (max-width: 576px) {
+  .hero-eyebrow {
+    gap: 8px;
+    padding: 6px 14px;
+    font-size: .6rem;
+    letter-spacing: 1.5px;
+  }
+  .hero-eyebrow-line { width: 16px; }
 }
 .hero-eyebrow-line {
   width: 32px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--accent));
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #de6b3e);
   flex: 0 0 auto;
 }
 .hero-eyebrow-line:last-child { background: linear-gradient(90deg, var(--accent), transparent); }
@@ -551,6 +578,13 @@ body.modal-open {
   text-shadow:
     0 1px 3px rgba(0,0,0,.85),
     0 4px 14px rgba(0,0,0,.6);
+  background: rgba(67, 20, 7, .38);
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 999px;
+  padding: 8px 22px;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .18);
 }
 @media (max-width: 576px) { .hero-content .hero-sub { font-size: .9rem; } }
 
