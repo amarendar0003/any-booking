@@ -1,324 +1,423 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}AnyBooking{% endblock %} — AnyBooking</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   {% load static local_names %}
-  <link href="{% static 'css/main.css' %}?v=1.7" rel="stylesheet">
+  <link href="{% static 'css/main.css' %}?v=1.8" rel="stylesheet">
   <link href="{% static 'css/auth.css' %}?v=1.7" rel="stylesheet">
   {% block extra_head %}{% endblock %}
 </head>
+
 <body>
 
-{# ── Resolve current URLs once, used below to mark the active nav item ── #}
-{% url 'home' as home_url %}
-{% url 'service_list' as all_services_url %}
-{% url 'booking_lookup' as booking_lookup_url %}
-{% url 'customer_my_bookings' as my_bookings_url %}
+  {# ── Resolve current URLs once, used below to mark the active nav item ── #}
+  {% url 'home' as home_url %}
+  {% url 'service_list' as all_services_url %}
+  {% url 'booking_lookup' as booking_lookup_url %}
+  {% url 'customer_my_bookings' as my_bookings_url %}
 
-<nav class="navbar navbar-expand-xl">
-  <div class="container-fluid px-3 px-xl-4">
-    <a class="navbar-brand" href="{% url 'home' %}">
-      <span class="brand-icon"><img src="{% static 'img/AnyBookingMainLogo.jpg' %}" alt="AnyBooking logo"></span>
-      AnyBooking
-    </a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navMain">
-      <ul class="navbar-nav mx-xl-auto">
-        <li class="nav-item">
-          <a class="nav-link{% if request.path == home_url %} active{% endif %}" href="{{ home_url }}">Home</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link{% if request.path == all_services_url %} active{% endif %}" href="{{ all_services_url }}">Services</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link{% if request.path == '/about/' %} active{% endif %}" href="/about/">About Us</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link{% if request.path == '/contact/' %} active{% endif %}" href="/contact/">Contact Us</a>
-        </li>
-        {% for cat in nav_categories %}
-          {% if cat.slug != 'catering' and cat.slug != 'event_management' and cat.slug != 'priests' and cat.slug != 'banquet_hall' and cat.slug != 'music_band' and cat.slug != 'hotels' and cat.slug != 'dancing'    %}
-          {% url 'service_list_by_category' cat.slug as cat_url %}
+  <nav class="navbar navbar-expand-xl">
+    <div class="container-fluid px-3 px-xl-4">
+      <a class="navbar-brand" href="{% url 'home' %}">
+        <span class="brand-icon"><img src="{% static 'img/AnyBookingMainLogo.jpg' %}" alt="AnyBooking logo"></span>
+        AnyBooking
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navMain">
+        <ul class="navbar-nav mx-xl-auto">
           <li class="nav-item">
-            <a class="nav-link{% if request.path == cat_url %} active{% endif %}" href="{{ cat_url }}">{{ cat|local_cat_name:request }}</a>
+            <a class="nav-link{% if request.path == home_url %} active{% endif %}" href="{{ home_url }}">Home</a>
           </li>
-          {% endif %}
+          <li class="nav-item">
+            <a class="nav-link{% if request.path == all_services_url %} active{% endif %}"
+              href="{{ all_services_url }}">Services</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link{% if request.path == '/about/' %} active{% endif %}" href="/about/">About Us</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link{% if request.path == '/contact/' %} active{% endif %}" href="/contact/">Contact Us</a>
+          </li>
+          {% for cat in nav_categories %}
+            {% if cat.slug != 'catering' and cat.slug != 'event_management' and cat.slug != 'priests' and cat.slug != 'banquet_hall' and cat.slug != 'music_band' and cat.slug != 'hotels' and cat.slug != 'dancing' %}
+            {% url 'service_list_by_category' cat.slug as cat_url %}
+            <li class="nav-item">
+              <a class="nav-link{% if request.path == cat_url %} active{% endif %}" href="{{ cat_url }}">{{ cat|local_cat_name:request }}</a>
+            </li>
+            {% endif %}
           {% endfor %}
-        <li class="nav-item">
-          {% if request.user.is_authenticated %}
-          <a class="nav-link{% if request.path == my_bookings_url %} active{% endif %}" href="{{ my_bookings_url }}">
-            <i class="bi bi-journal-check"></i> My Bookings
-          </a>
-          {% else %}
-          <a class="nav-link{% if request.path == booking_lookup_url %} active{% endif %}" href="{{ booking_lookup_url }}">
-            <i class="bi bi-search"></i> Find My Booking
-          </a>
-          {% endif %}
-        </li>
-      </ul>
-
-      <!-- Location indicator -->
-      <div class="me-3 d-flex align-items-center">
-        {% if pref_country %}
-        <span class="location-badge">
-          <i class="bi bi-geo-alt-fill"></i>
-          <span class="location-badge-text">{% if pref_state %}{{ pref_state.name }}, {% endif %}{{ pref_country.name }}</span>
-        </span>
-        <button class="btn btn-link btn-sm text-muted p-0 ms-2 change-location-btn" style="font-size:.75rem" onclick="openLocationModal()">
-          Change
-        </button>
-        {% else %}
-        <button class="btn btn-outline-primary btn-sm py-0 px-2 change-location-btn" style="font-size:.8rem" onclick="openLocationModal()">
-          <i class="bi bi-geo-alt"></i> Set Location
-        </button>
-        {% endif %}
-      </div>
-
-      {# ── Auth nav buttons ── #}
-      {% if request.user.is_authenticated %}
-      <div class="auth-nav-user dropdown">
-        <button class="auth-nav-avatar-btn dropdown-toggle" type="button"
-                data-bs-toggle="dropdown" aria-expanded="false"
-                id="userNavMenu" title="{{ request.user.email }}">
-          <span class="auth-nav-avatar">
-            {{ request.user.email|slice:':1'|upper }}
-          </span>
-          <i class="bi bi-chevron-down" style="font-size:.7rem"></i>
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end auth-nav-dropdown">
-          <li class="auth-nav-dropdown-email px-3 py-2 text-truncate" title="{{ request.user.email }}">
-            {{ request.user.email }}
-          </li>
-          <li><hr class="dropdown-divider"></li>
-          <li><a class="dropdown-item" href="{{ my_bookings_url }}">
-            <i class="bi bi-journal-check me-2"></i>My Bookings</a></li>
-          {% if request.user.profile.role == 'vendor' %}
-          <li><a class="dropdown-item" href="/vendor/dashboard/">
-            <i class="bi bi-shop me-2"></i>Vendor Dashboard</a></li>
-          {% endif %}
-          <li><hr class="dropdown-divider"></li>
-          <li>
-            <form method="post" action="/accounts/logout/" class="d-inline" id="navLogoutForm">
-              {% csrf_token %}
-              <button type="button" class="dropdown-item text-danger" onclick="navLogout()">
-                <i class="bi bi-box-arrow-right me-2"></i>Sign Out
-              </button>
-            </form>
+          <li class="nav-item">
+            {% if request.user.is_authenticated %}
+            <a class="nav-link{% if request.path == my_bookings_url %} active{% endif %}" href="{{ my_bookings_url }}">
+              <i class="bi bi-journal-check"></i> My Bookings
+            </a>
+            {% else %}
+            <a class="nav-link{% if request.path == booking_lookup_url %} active{% endif %}"
+              href="{{ booking_lookup_url }}">
+              <i class="bi bi-search"></i> Find My Booking
+            </a>
+            {% endif %}
           </li>
         </ul>
-      </div>
-      {% else %}
-      <div class="auth-nav-btns">
-        <button class="auth-nav-btn auth-nav-btn-solid" onclick="openAuthModal()" id="navAuthBtn">
-          <i class="bi bi-person-circle me-1"></i>Sign In
-        </button>
-      </div>
-      {% endif %}
-    </div>
-  </div>
-</nav>
 
-{% if messages %}
-<div class="container mt-3">
-  {% for msg in messages %}
-  <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show">
-    {{ msg }} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
-
-<!-- Location preference modal -->
-<div class="modal fade" id="locationModal" tabindex="-1" aria-labelledby="locationModalLabel"
-     {% if show_location_modal %}data-bs-backdrop="static" data-bs-keyboard="false"{% endif %}>
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header border-0 pb-0">
-        <div class="text-center w-100 pt-2">
-          <div class="display-6 text-primary mb-1"><i class="bi bi-geo-alt-fill"></i></div>
-          <h5 class="modal-title fw-bold" id="locationModalLabel">Where are you looking?</h5>
-          <p class="text-muted small mb-0">We'll show services available in your area</p>
-        </div>
-      </div>
-      <div class="modal-body px-4 pb-2">
-
-        <!-- Auto-detect button -->
-        <div class="text-center mb-3">
-          <button type="button" class="btn btn-outline-primary btn-sm px-4" id="detectBtn" onclick="autoDetectLocation()">
-            <i class="bi bi-crosshair me-1"></i> Detect my location
+        <!-- Location indicator -->
+        <div class="me-3 d-flex align-items-center">
+          {% if pref_country %}
+          <span class="location-badge">
+            <i class="bi bi-geo-alt-fill"></i>
+            <span class="location-badge-text">{% if pref_state %}{{ pref_state.name }}, {% endif %}{{ pref_country.name }}</span>
+          </span>
+          <button class="btn btn-link btn-sm text-muted p-0 ms-2 change-location-btn" style="font-size:.75rem"
+            onclick="openLocationModal()">
+            Change
           </button>
-          <div id="detectStatus" class="text-muted small mt-1" style="min-height:1.2em"></div>
+          {% else %}
+          <button class="btn btn-outline-primary btn-sm py-0 px-2 change-location-btn" style="font-size:.8rem"
+            onclick="openLocationModal()">
+            <i class="bi bi-geo-alt"></i> Set Location
+          </button>
+          {% endif %}
         </div>
 
-        <div class="text-center text-muted small mb-3">— or select manually —</div>
-
-        <!-- Country -->
-        <div class="mb-3">
-          <label class="form-label fw-semibold small">Country</label>
-          <select id="modal-country" class="form-select" onchange="modalLoadStates(this.value)">
-            <option value="">Select a country…</option>
-            {% for c in pref_countries %}
-            <option value="{{ c.id }}" data-code="{{ c.code }}">{{ c.name }}</option>
-            {% endfor %}
-          </select>
+        {# ── Auth nav buttons ── #}
+        {% if request.user.is_authenticated %}
+        <div class="auth-nav-user dropdown">
+          <button class="auth-nav-avatar-btn dropdown-toggle" type="button" data-bs-toggle="dropdown"
+            aria-expanded="false" id="userNavMenu" title="{{ request.user.email }}">
+            <span class="auth-nav-avatar">
+              {{ request.user.email|slice:':1'|upper }}
+            </span>
+            <i class="bi bi-chevron-down" style="font-size:.7rem"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end auth-nav-dropdown">
+            <li class="auth-nav-dropdown-email px-3 py-2 text-truncate" title="{{ request.user.email }}">
+              {{ request.user.email }}
+            </li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+            <li><a class="dropdown-item" href="{{ my_bookings_url }}">
+                <i class="bi bi-journal-check me-2"></i>My Bookings</a></li>
+            {% if request.user.profile.role == 'vendor' %}
+            <li><a class="dropdown-item" href="/vendor/dashboard/">
+                <i class="bi bi-shop me-2"></i>Vendor Dashboard</a></li>
+            {% endif %}
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+            <li>
+              <form method="post" action="/accounts/logout/" class="d-inline" id="navLogoutForm">
+                {% csrf_token %}
+                <button type="button" class="dropdown-item text-danger" onclick="navLogout()">
+                  <i class="bi bi-box-arrow-right me-2"></i>Sign Out
+                </button>
+              </form>
+            </li>
+          </ul>
         </div>
-
-        <!-- State -->
-        <div class="mb-3">
-          <label class="form-label fw-semibold small">State / Region <span class="text-muted fw-normal">(optional)</span></label>
-          <select id="modal-state" class="form-select">
-            <option value="">All states</option>
-          </select>
-        </div>
-
-      </div>
-      <div class="modal-footer border-0 pt-0 px-4 pb-4 flex-column gap-2">
-        <button type="button" class="btn btn-primary w-100 fw-semibold" onclick="saveLocationPref()">
-          <i class="bi bi-check-lg me-1"></i> Confirm Location
-        </button>
-        {% if not show_location_modal %}
-        <button type="button" class="btn btn-link text-muted w-100 btn-sm" data-bs-dismiss="modal">Cancel</button>
         {% else %}
-        <button type="button" class="btn btn-link text-muted w-100 btn-sm" onclick="skipLocation()">
-          Skip for now
-        </button>
+        <div class="auth-nav-btns">
+          <button class="auth-nav-btn auth-nav-btn-solid" onclick="openAuthModal()" id="navAuthBtn">
+            <i class="bi bi-person-circle me-1"></i>Sign In
+          </button>
+        </div>
         {% endif %}
       </div>
     </div>
+  </nav>
+
+  {% if messages %}
+  <div class="container mt-3">
+    {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show">
+      {{ msg }} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
   </div>
-</div>
+  {% endif %}
 
-{% block content %}{% endblock %}
+  <!-- Location preference modal -->
+  <div class="modal fade" id="locationModal" tabindex="-1" aria-labelledby="locationModalLabel"
+       {% if show_location_modal %}data-bs-backdrop="static" data-bs-keyboard="false"{% endif %}>
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header border-0 pb-0">
+          <div class="text-center w-100 pt-2">
+            <div class="display-6 text-primary mb-1"><i class="bi bi-geo-alt-fill"></i></div>
+            <h5 class="modal-title fw-bold" id="locationModalLabel">Where are you looking?</h5>
+            <p class="text-muted small mb-0">We'll show services available in your area</p>
+          </div>
+        </div>
+        <div class="modal-body px-4 pb-2">
 
-{# ── Auth modal (available on every page) ── #}
-{% if not request.user.is_authenticated %}
+          <!-- Auto-detect button -->
+          <div class="text-center mb-3">
+            <button type="button" class="btn btn-outline-primary btn-sm px-4" id="detectBtn"
+              onclick="autoDetectLocation()">
+              <i class="bi bi-crosshair me-1"></i> Detect my location
+            </button>
+            <div id="detectStatus" class="text-muted small mt-1" style="min-height:1.2em"></div>
+          </div>
+
+          <div class="text-center text-muted small mb-3">— or select manually —</div>
+
+          <!-- Country -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Country</label>
+            <select id="modal-country" class="form-select" onchange="modalLoadStates(this.value)">
+              <option value="">Select a country…</option>
+              {% for c in pref_countries %}
+              <option value="{{ c.id }}" data-code="{{ c.code }}">{{ c.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- State -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">State / Region <span
+                class="text-muted fw-normal">(optional)</span></label>
+            <select id="modal-state" class="form-select">
+              <option value="">All states</option>
+            </select>
+          </div>
+
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4 flex-column gap-2">
+          <button type="button" class="btn btn-primary w-100 fw-semibold" onclick="saveLocationPref()">
+            <i class="bi bi-check-lg me-1"></i> Confirm Location
+          </button>
+          {% if not show_location_modal %}
+          <button type="button" class="btn btn-link text-muted w-100 btn-sm" data-bs-dismiss="modal">Cancel</button>
+          {% else %}
+          <button type="button" class="btn btn-link text-muted w-100 btn-sm" onclick="skipLocation()">
+            Skip for now
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% block content %}{% endblock %}
+
+  {# ── Auth modal (available on every page) ── #}
+  {% if not request.user.is_authenticated %}
   {% include 'accounts/auth_modal.html' %}
-{% endif %}
+  {% endif %}
 
-<footer class="site-footer mt-5">
-  <div class="container text-center">
-    <p class="mb-1 small"><span class="brand-name">AnyBooking</span></p>
-    <p class="mb-0" style="font-size:.78rem">
-      <a href="{% url 'service_list' %}">All Services</a> &nbsp;·&nbsp;
-      {% if request.user.is_authenticated %}
-      <a href="{{ my_bookings_url }}">My Bookings</a>
-      {% else %}
-      <a href="{{ booking_lookup_url }}">Find My Booking</a>
-      {% endif %}
-    </p>
-    <p class="mb-0 mt-2" style="font-size:.72rem;color:#475569">&copy; 2025 AnyBooking · Banquet Halls · Music Bands · Catering · Hotels &amp; more</p>
-  </div>
-</footer>
+  <footer class="site-footer">
+    <div class="container">
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-<script>
-(function () {
-  const ajaxUrl = "{% url 'location_ajax' %}";
-  const setLocUrl = "{% url 'set_location' %}";
-  const showOnLoad = {{ show_location_modal|yesno:"true,false" }};
-  const prefCountryId = "{{ pref_country.id|default:'' }}";
-  const prefStateId = "{{ pref_state.id|default:'' }}";
+      <!-- Main 4-Column Footer Content -->
+      <div class="row g-4">
 
-  function getCookie(name) {
-    const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
-    return v ? v.pop() : '';
-  }
+        <!-- Col 1: Brand & Overview -->
+        <div class="col-lg-4 col-md-6">
+          <a class="footer-brand-logo" href="{% url 'home' %}">
+            <img src="{% static 'img/AnyBookingMainLogo.jpg' %}" alt="AnyBooking logo">
+            AnyBooking
+          </a>
+          <p class="footer-brand-text">
+            India's dedicated platform for booking verified banquet halls, event management, catering, live music bands,
+            mandaps, priests, and hotels.
+          </p>
+          <div class="footer-contact-mini">
+            <div><i class="bi bi-telephone-fill"></i> Helpline: <strong>+91 9151000254</strong></div>
+            <div><i class="bi bi-envelope-fill"></i> Support: <strong>support@anybooking.com</strong></div>
+            <div><i class="bi bi-geo-alt-fill"></i> Hyderabad, Telangana, India</div>
+          </div>
+        </div>
 
-  window.modalLoadStates = async function (countryId, preselectStateId) {
-    const sel = document.getElementById('modal-state');
-    sel.innerHTML = '<option value="">All states</option>';
-    if (!countryId) return;
-    const r = await fetch(`${ajaxUrl}?kind=states&parent_id=${countryId}`);
-    const d = await r.json();
-    d.results.forEach(s => {
-      sel.innerHTML += `<option value="${s.id}" ${s.id == preselectStateId ? 'selected' : ''}>${s.name}</option>`;
-    });
-  };
+        <!-- Col 2: Explore Services -->
+        <div class="col-lg-3 col-md-6 col-6">
+          <div class="footer-col-title">Explore Services</div>
+          <ul class="footer-links-list">
+            {% for cat in nav_categories %}
+            {% if forloop.counter <= 6 %} <li>
+              <a href="{% url 'service_list_by_category' cat.slug %}">
+                <i class="bi bi-chevron-right text-primary" style="font-size:.65rem"></i>
+                {{ cat|local_cat_name:request }}
+              </a>
+              </li>
+              {% endif %}
+              {% empty %}
+              <li><a href="{% url 'service_list' %}">Banquet Halls</a></li>
+              <li><a href="{% url 'service_list' %}">Catering Services</a></li>
+              <li><a href="{% url 'service_list' %}">Music Bands</a></li>
+              <li><a href="{% url 'service_list' %}">Event Management</a></li>
+              {% endfor %}
+              <li>
+                <a href="{% url 'service_list' %}" class="fw-bold text-primary">
+                  <i class="bi bi-arrow-right-short"></i> View All Services →
+                </a>
+              </li>
+          </ul>
+        </div>
 
-  document.addEventListener('DOMContentLoaded', function () {
-    const modalEl = document.getElementById('locationModal');
-    modalEl.addEventListener('show.bs.modal', function () {
-      const countrySel = document.getElementById('modal-country');
-      if (prefCountryId && !countrySel.value) {
-        countrySel.value = prefCountryId;
-        modalLoadStates(prefCountryId, prefStateId);
-      }
-      document.getElementById('detectStatus').textContent = '';
-    });
-    if (showOnLoad && !sessionStorage.getItem('ab_loc_skipped')) {
-      new bootstrap.Modal(modalEl).show();
+        <!-- Col 3: Quick Navigation & Help -->
+        <div class="col-lg-2 col-md-6 col-6">
+          <div class="footer-col-title">Quick Links</div>
+          <ul class="footer-links-list">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'service_list' %}">Browse Services</a></li>
+            <li><a href="/about/">About Us</a></li>
+            <li><a href="/contact/">Contact Us</a></li>
+            <li>
+              {% if request.user.is_authenticated %}
+              <a href="{{ my_bookings_url }}">My Bookings</a>
+              {% else %}
+              <a href="{{ booking_lookup_url }}">Find My Booking</a>
+              {% endif %}
+            </li>
+          </ul>
+        </div>
+
+        <!-- Col 4: For Venue Owners & Partners -->
+        <div class="col-lg-3 col-md-6">
+          <div class="footer-col-title">For Venue Owners</div>
+          <p class="footer-brand-text mb-2" style="font-size:.85rem">
+            Grow your business by listing your banquet hall, catering service, or event team on AnyBooking.
+          </p>
+          <p class="footer-brand-text mb-2" style="font-size:.85rem">
+            If you want to become a vendor, reach us at:
+          </p>
+          <div
+            style="font-size:.88rem;color:var(--navy);font-weight:700;background:#ffedd5;border:1px solid #fdba74;border-radius:8px;padding:8px 12px;display:inline-block;">
+            <i class="bi bi-envelope-fill text-primary me-1"></i> partners@anybooking.com
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Copyright & Tagline -->
+      <div class="footer-bottom-bar">
+        <div
+          class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2 text-center text-md-start">
+          <div>
+            &copy; 2025 <strong>AnyBooking Technologies</strong>. All rights reserved.
+          </div>
+          <div>
+            Banquet Halls · Marriage Mandaps · Music Bands · Catering · Hotels &amp; more across India
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    (function () {
+      const ajaxUrl = "{% url 'location_ajax' %}";
+      const setLocUrl = "{% url 'set_location' %}";
+      const showOnLoad = {{ show_location_modal|yesno:"true,false" }};
+    const prefCountryId = "{{ pref_country.id|default:'' }}";
+    const prefStateId = "{{ pref_state.id|default:'' }}";
+
+    function getCookie(name) {
+      const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+      return v ? v.pop() : '';
     }
-  });
 
-  window.openLocationModal = function () {
-    const modalEl = document.getElementById('locationModal');
-    (bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl)).show();
-  };
+    window.modalLoadStates = async function (countryId, preselectStateId) {
+      const sel = document.getElementById('modal-state');
+      sel.innerHTML = '<option value="">All states</option>';
+      if (!countryId) return;
+      const r = await fetch(`${ajaxUrl}?kind=states&parent_id=${countryId}`);
+      const d = await r.json();
+      d.results.forEach(s => {
+        sel.innerHTML += `<option value="${s.id}" ${s.id == preselectStateId ? 'selected' : ''}>${s.name}</option>`;
+      });
+    };
 
-  window.saveLocationPref = async function () {
-    const countryId = document.getElementById('modal-country').value;
-    const stateId = document.getElementById('modal-state').value;
-    const fd = new FormData();
-    fd.append('country_id', countryId);
-    fd.append('state_id', stateId);
-    fd.append('csrfmiddlewaretoken', getCookie('csrftoken'));
-    await fetch(setLocUrl, { method: 'POST', body: fd });
-    window.location.reload();
-  };
-
-  window.navLogout = async function () {
-    const v = document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)');
-    const csrf = v ? v.pop() : '';
-    await fetch('/accounts/logout/', {
-      method: 'POST',
-      body: (() => { const f = new FormData(); f.append('csrfmiddlewaretoken', csrf); return f; })(),
-      credentials: 'same-origin',
-    });
-    window.location.href = '/';
-  };
-
-  window.skipLocation = function () {
-    sessionStorage.setItem('ab_loc_skipped', '1');
-    bootstrap.Modal.getInstance(document.getElementById('locationModal'))?.hide();
-  };
-
-  window.autoDetectLocation = async function () {
-    const btn = document.getElementById('detectBtn');
-    const status = document.getElementById('detectStatus');
-    btn.disabled = true;
-    status.textContent = 'Detecting…';
-    try {
-      const geo = await fetch('https://ipapi.co/json/').then(r => r.json());
-      const country_code = geo.country_code || '';
-      const state_name = geo.region || '';
-      if (!country_code) throw new Error('no country');
-      const match = await fetch(`        ${ajaxUrl}?kind=match&country_code=${encodeURIComponent(country_code)}&state_name=${encodeURIComponent(state_name)}`).then(r => r.json());
-      if (!match.country_id) {
-        status.textContent = "Your region isn't in our database yet — please select manually.";
-        btn.disabled = false;
-        return;
+    document.addEventListener('DOMContentLoaded', function () {
+      const modalEl = document.getElementById('locationModal');
+      modalEl.addEventListener('show.bs.modal', function () {
+        const countrySel = document.getElementById('modal-country');
+        if (prefCountryId && !countrySel.value) {
+          countrySel.value = prefCountryId;
+          modalLoadStates(prefCountryId, prefStateId);
+        }
+        document.getElementById('detectStatus').textContent = '';
+      });
+      if (showOnLoad && !sessionStorage.getItem('ab_loc_skipped')) {
+        new bootstrap.Modal(modalEl).show();
       }
-      document.getElementById('modal-country').value = match.country_id;
-      await modalLoadStates(match.country_id, match.state_id || '');
-      status.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill"></i> Detected: ${match.country_name}${match.state_name ? ', ' + match.state_name : ''}</span>`;
-    } catch (e) {
-      status.textContent = 'Detection failed — please select manually.';
-    }
-    btn.disabled = false;
-  };
-})();
-</script>
+    });
 
-{% block extra_js %}{% endblock %}
+    window.openLocationModal = function () {
+      const modalEl = document.getElementById('locationModal');
+      (bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl)).show();
+    };
+
+    window.saveLocationPref = async function () {
+      const countryId = document.getElementById('modal-country').value;
+      const stateId = document.getElementById('modal-state').value;
+      const fd = new FormData();
+      fd.append('country_id', countryId);
+      fd.append('state_id', stateId);
+      fd.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+      await fetch(setLocUrl, { method: 'POST', body: fd });
+      window.location.reload();
+    };
+
+    window.navLogout = async function () {
+      const v = document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)');
+      const csrf = v ? v.pop() : '';
+      await fetch('/accounts/logout/', {
+        method: 'POST',
+        body: (() => { const f = new FormData(); f.append('csrfmiddlewaretoken', csrf); return f; })(),
+        credentials: 'same-origin',
+      });
+      window.location.href = '/';
+    };
+
+    window.skipLocation = function () {
+      sessionStorage.setItem('ab_loc_skipped', '1');
+      bootstrap.Modal.getInstance(document.getElementById('locationModal'))?.hide();
+    };
+
+    window.autoDetectLocation = async function () {
+      const btn = document.getElementById('detectBtn');
+      const status = document.getElementById('detectStatus');
+      btn.disabled = true;
+      status.textContent = 'Detecting…';
+      try {
+        const geo = await fetch('https://ipapi.co/json/').then(r => r.json());
+        const country_code = geo.country_code || '';
+        const state_name = geo.region || '';
+        if (!country_code) throw new Error('no country');
+        const match = await fetch(`        ${ajaxUrl}?kind=match&country_code=${encodeURIComponent(country_code)}&state_name=${encodeURIComponent(state_name)}`).then(r => r.json());
+        if (!match.country_id) {
+          status.textContent = "Your region isn't in our database yet — please select manually.";
+          btn.disabled = false;
+          return;
+        }
+        document.getElementById('modal-country').value = match.country_id;
+        await modalLoadStates(match.country_id, match.state_id || '');
+        status.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill"></i> Detected: ${match.country_name}${match.state_name ? ', ' + match.state_name : ''}</span>`;
+      } catch (e) {
+        status.textContent = 'Detection failed — please select manually.';
+      }
+      btn.disabled = false;
+    };
+}) ();
+  </script>
+
+  {% block extra_js %}{% endblock %}
 </body>
+
 </html>
