@@ -1,0 +1,126 @@
+{% extends "vendors/base.html" %}
+
+{% block title %}Profile{% endblock %}
+{% block nav_profile %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+  .profile-card {
+    background: #fff; border: 1px solid #f3e6d8; border-radius: 16px;
+    padding: 2rem; box-shadow: 0 2px 14px rgba(253, 186, 116, .08);
+  }
+  .profile-head {
+    display: flex; align-items: center; gap: 1.4rem;
+    padding-bottom: 1.6rem; margin-bottom: 1.6rem; border-bottom: 1px solid #f3e6d8;
+  }
+  .profile-avatar {
+    width: 84px; height: 84px; border-radius: 50%; object-fit: cover;
+    border: 3px solid var(--v-orange); flex-shrink: 0;
+  }
+  .profile-avatar-fallback {
+    width: 84px; height: 84px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--v-orange), var(--v-orange-dark));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 1.9rem; font-weight: 700; border: 3px solid #fff;
+    box-shadow: 0 0 0 2px var(--v-orange);
+  }
+  .profile-head h2 { font-size: 1.25rem; font-weight: 700; color: #1a1a2e; margin: 0 0 .3rem; }
+  .profile-badge-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+  .status-pill {
+    font-size: .72rem; font-weight: 700; padding: .18rem .65rem; border-radius: 20px;
+    text-transform: uppercase; letter-spacing: .03em;
+  }
+  .status-pill.active { background: #d1fae5; color: #065f46; }
+  .status-pill.inactive { background: #fee2e2; color: #991b1b; }
+
+  .profile-fields { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.4rem 2rem; }
+  @media (max-width: 640px) { .profile-fields { grid-template-columns: 1fr; } }
+
+  .field-group label {
+    display: block; font-size: .7rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .05em; color: #9ca3af; margin-bottom: .35rem;
+  }
+  .field-value {
+    display: flex; align-items: center; gap: .55rem;
+    background: #fbfaf8; border: 1px solid #f3e6d8; border-radius: 10px;
+    padding: .65rem .9rem; font-size: .92rem; color: #1a1a2e; min-height: 2.6rem;
+  }
+  .field-value i { color: var(--v-orange-dark); font-size: .95rem; }
+  .field-value.muted { color: #9ca3af; font-style: italic; }
+  .field-value.readonly-note { font-size: .92rem; }
+
+  .readonly-banner {
+    display: flex; align-items: center; gap: .5rem;
+    background: var(--v-cream); border: 1px solid #f3e6d8; border-radius: 10px;
+    padding: .6rem .9rem; font-size: .8rem; color: #7c2d12; margin-bottom: 1.6rem;
+  }
+  .readonly-banner i { color: var(--v-orange-dark); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-person-circle me-2 text-primary"></i>Profile</h1>
+</div>
+
+<div class="profile-card">
+  <div class="readonly-banner">
+    <i class="bi bi-shield-lock"></i>
+    These details are managed by AnyBooking. To update anything here, contact your account manager.
+  </div>
+
+  <div class="profile-head">
+    {% if vendor.avatar %}
+      <img src="{{ vendor.avatar.url }}" alt="{{ vendor.name }}" class="profile-avatar">
+    {% else %}
+      <div class="profile-avatar-fallback">{{ vendor.name|slice:":1"|upper }}</div>
+    {% endif %}
+    <div>
+      <h2>{{ vendor.name }}</h2>
+      <div class="profile-badge-row">
+        <span class="status-pill {% if vendor.is_active %}active{% else %}inactive{% endif %}">
+          {% if vendor.is_active %}Active{% else %}Inactive{% endif %}
+        </span>
+        {% if role %}<span class="role-pill" style="position:static; margin:0; background:#fef3c7; color:#92400e;">{{ role }}</span>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="profile-fields">
+    <div class="field-group">
+      <label>Business Name</label>
+      <div class="field-value"><i class="bi bi-shop"></i> {{ vendor.name }}</div>
+    </div>
+
+    <div class="field-group">
+      <label>Registration Number</label>
+      <div class="field-value {% if not vendor.registration_number %}muted{% endif %}">
+        <i class="bi bi-file-earmark-text"></i>
+        {{ vendor.registration_number|default:"Not on file" }}
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label>Email Address</label>
+      <div class="field-value {% if not vendor.email %}muted{% endif %}">
+        <i class="bi bi-envelope"></i> {{ vendor.email|default:"Not on file" }}
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label>Phone Number</label>
+      <div class="field-value {% if not vendor.phone %}muted{% endif %}">
+        <i class="bi bi-telephone"></i> {{ vendor.phone|default:"Not on file" }}
+      </div>
+    </div>
+
+    <div class="field-group" style="grid-column: 1 / -1;">
+      <label>Address</label>
+      <div class="field-value {% if not vendor.address %}muted{% endif %}">
+        <i class="bi bi-geo-alt"></i>
+        {{ vendor.address|default:"Not on file" }}{% if vendor.city %}, {{ vendor.city.full_location }}{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

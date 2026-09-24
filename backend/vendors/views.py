@@ -1,5 +1,6 @@
 import calendar as cal_module
-from datetime import date
+import json
+from datetime import date, timedelta
 from functools import wraps
 
 from django.contrib import messages
@@ -412,4 +413,193 @@ def vendor_edit_service(request, service_id, vendor=None, role=None):
         'role': role,
         'service': service,
         'images': service.images.all(),
+    })
+
+# ── Reports ────────────────────────────────────────────────────────────────
+
+def _build_report_buckets(period, today):
+    """Returns an ordered list of {label, start, end} date-range buckets
+    for the given period ('weekly' | 'monthly' | 'yearly'), most recent last.
+    """
+    buckets = []
+
+    if period == 'weekly':
+        # Last 8 ISO weeks (Mon–Sun), oldest first.
+        this_monday = today - timedelta(days=today.weekday())
+        for i in range(7, -1, -1):
+            start = this_monday - timedelta(weeks=i)
+            end = start + timedelta(days=6)
+            label = f'{start.strftime("%d %b")}\u2013{end.strftime("%d %b")}'
+            buckets.append({'label': label, 'start': start, 'end': end})
+
+    elif period == 'yearly':
+        # Last 5 calendar years, oldest first.
+        for i in range(4, -1, -1):
+            yr = today.year - i
+            buckets.append({
+                'label': str(yr),
+                'start': date(yr, 1, 1),
+                'end': date(yr, 12, 31),
+            })
+
+    else:  # monthly (default) — last 12 calendar months, oldest first.
+        period = 'monthly'
+        y, m = today.year, today.month
+        months = []
+        for _ in range(12):
+            months.append((y, m))
+            m -= 1
+            if m == 0:
+                m, y = 12, y - 1
+        for yr, mo in reversed(months):
+            start = date(yr, mo, 1)
+            last_day = cal_module.monthrange(yr, mo)[1]
+            end = date(yr, mo, last_day)
+            buckets.append({'label': start.strftime('%b %Y'), 'start': start, 'end': end})
+
+    return buckets
+
+
+@vendor_required
+def vendor_reports(request, vendor=None, role=None):
+    services = vendor.services.order_by('name')
+    service_ids = list(services.values_list('id', flat=True))
+
+    period = request.GET.get('period', 'monthly')
+    if period not in ('weekly', 'monthly', 'yearly'):
+        period = 'monthly'
+
+    selected_listing = request.GET.get('listing', 'all')
+    if selected_listing.isdigit() and int(selected_listing) in service_ids:
+        chart_service_ids = [int(selected_listing)]
+        selected_listing = str(int(selected_listing))
+    else:
+        chart_service_ids = service_ids
+        selected_listing = 'all'
+
+    today = timezone.localdate()
+    buckets = _build_report_buckets(period, today)
+
+    trend_labels, trend_total, trend_confirmed, trend_cancelled, trend_pending = [], [], [], [], []
+    for b in buckets:
+        qs = Booking.objects.filter(
+            service_id__in=chart_service_ids,
+            created_at__date__gte=b['start'],
+            created_at__date__lte=b['end'],
+        )
+        trend_labels.append(b['label'])
+        trend_total.append(qs.count())
+        trend_confirmed.append(qs.filter(status=Booking.STATUS_CONFIRMED).count())
+        trend_cancelled.append(qs.filter(status=Booking.STATUS_CANCELLED).count())
+        trend_pending.append(qs.filter(status=Booking.STATUS_PENDING).count())
+
+    range_start = buckets[0]['start'] if buckets else today
+    range_end = buckets[-1]['end'] if buckets else today
+
+    scope_qs = Booking.objects.filter(
+        service_id__in=chart_service_ids,
+        created_at__date__gte=range_start,
+        created_at__date__lte=range_end,
+    )
+    status_counts = {
+        'confirmed': scope_qs.filter(status=Booking.STATUS_CONFIRMED).count(),
+        'pending': scope_qs.filter(status=Booking.STATUS_PENDING).count(),
+        'cancelled': scope_qs.filter(status=Booking.STATUS_CANCELLED).count(),
+        'completed': scope_qs.filter(status=Booking.STATUS_COMPLETED).count(),
+    }
+    kpi_total = sum(status_counts.values())
+    # Flat booking list for the "click a doughnut slice" popup — the JS
+    # filters this client-side by status, so no extra request is needed.
+    booking_records = []
+    for b in scope_qs.select_related('service').order_by('-created_at'):
+        booking_records.append({
+            'confirmation_number': b.confirmation_number,
+            'customer_name': b.customer_name,
+            'customer_email': b.customer_email or '',
+            'customer_phone': b.customer_phone,
+            'service_name': b.service.name,
+            'event_date': b.event_date.strftime('%d %b %Y') if b.event_date else '',
+            'event_time': b.event_time.strftime('%I:%M %p').lstrip('0') if b.event_time else '',
+            'guest_count': b.guest_count,
+            'total_amount': str(b.total_amount),
+            'currency_symbol': b.service.currency_symbol,
+            'status': b.status,
+            'created_at': b.created_at.strftime('%d %b %Y'),
+        })
+
+    # Per-listing breakdown — always covers every listing, regardless of the
+    # dropdown, so a vendor with several listings sees all of them side by
+    # side at a glance.
+    listing_rows = []
+    for svc in services:
+        qs = Booking.objects.filter(
+            service=svc, created_at__date__gte=range_start, created_at__date__lte=range_end,
+        )
+        total = qs.count()
+        confirmed = qs.filter(status=Booking.STATUS_CONFIRMED).count()
+        cancelled = qs.filter(status=Booking.STATUS_CANCELLED).count()
+        pending = qs.filter(status=Booking.STATUS_PENDING).count()
+        completed = qs.filter(status=Booking.STATUS_COMPLETED).count()
+        booked = confirmed + completed
+        listing_rows.append({
+            'service': svc,
+            'total': total,
+            'confirmed': confirmed,
+            'cancelled': cancelled,
+            'pending': pending,
+            'completed': completed,
+            'conversion_rate': round(booked / total * 100, 1) if total else None,
+        })
+
+    # Average booking value & revenue (confirmed/completed only), listing-wise.
+    for row in listing_rows:
+        booked_qs = Booking.objects.filter(
+            service=row['service'],
+            created_at__date__gte=range_start, created_at__date__lte=range_end,
+            status__in=[Booking.STATUS_CONFIRMED, Booking.STATUS_COMPLETED],
+        )
+        total_revenue = sum((b.total_amount for b in booked_qs), start=0)
+        count = booked_qs.count()
+        row['revenue'] = total_revenue
+        row['avg_booking_value'] = round(total_revenue / count, 2) if count else 0
+        row['currency_symbol'] = row['service'].currency_symbol
+
+    return render(request, 'vendors/reports.html', {
+        'vendor': vendor,
+        'role': role,
+        'services': services,
+        'period': period,
+        'selected_listing': selected_listing,
+        'kpi_total': kpi_total,
+        'kpi_confirmed': status_counts['confirmed'],
+        'kpi_cancelled': status_counts['cancelled'],
+        'kpi_pending': status_counts['pending'],
+        'kpi_completed': status_counts['completed'],
+        'listing_rows': listing_rows,
+        'range_label': f"{range_start.strftime('%d %b %Y')} \u2013 {range_end.strftime('%d %b %Y')}",
+        'trend_labels_json': json.dumps(trend_labels),
+        'trend_total_json': json.dumps(trend_total),
+        'trend_confirmed_json': json.dumps(trend_confirmed),
+        'trend_cancelled_json': json.dumps(trend_cancelled),
+        'trend_pending_json': json.dumps(trend_pending),
+        'status_labels_json': json.dumps(['Confirmed', 'Pending', 'Cancelled', 'Completed']),
+        'status_data_json': json.dumps([
+            status_counts['confirmed'], status_counts['pending'],
+            status_counts['cancelled'], status_counts['completed'],
+        ]),
+        'booking_records_json': json.dumps(booking_records),
+    })
+
+
+# ── Profile ───────────────────────────────────────────────────────────────
+
+@vendor_required
+def vendor_profile(request, vendor=None, role=None):
+    """Read-only vendor profile — owner/staff view their own business details.
+    Editing (if ever needed) belongs in the admin, so every field here is
+    intentionally read-only.
+    """
+    return render(request, 'vendors/profile.html', {
+        'vendor': vendor,
+        'role': role,
     })

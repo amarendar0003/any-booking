@@ -294,6 +294,11 @@ class Vendor(models.Model):
     phone = models.CharField(max_length=20)
     address = models.TextField(blank=True)
     city = models.ForeignKey(City, on_delete=models.SET_NULL, null=True, blank=True, related_name='vendors')
+    registration_number = models.CharField(
+        max_length=100, blank=True,
+        help_text='Business / GST / trade license registration number, shown read-only on the vendor profile page.',
+    )
+    avatar = models.ImageField(upload_to='vendors/avatars/', blank=True, null=True)
     is_active = models.BooleanField(default=True)
     notify_on_booking = models.BooleanField(
         default=True,

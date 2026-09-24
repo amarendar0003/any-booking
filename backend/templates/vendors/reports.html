@@ -1,0 +1,476 @@
+{% extends "vendors/base.html" %}
+
+{% block title %}Reports{% endblock %}
+{% block nav_reports %}active{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  .period-pills {
+    display: inline-flex; background: #fff; border: 1px solid #f3e6d8;
+    border-radius: 10px; padding: .25rem; gap: .2rem;
+  }
+  .period-pills a {
+    padding: .4rem .9rem; border-radius: 7px; font-size: .82rem; font-weight: 600;
+    color: #6b7280; text-decoration: none; transition: background .15s, color .15s;
+  }
+  .period-pills a.active { background: var(--v-orange-dark); color: #fff; }
+  .period-pills a:hover:not(.active) { background: var(--v-cream); color: #9a3412; }
+
+  .listing-select-wrap { min-width: 220px; }
+
+  .report-panel {
+    background: #fff; border: 1px solid #f3e6d8; border-radius: 14px;
+    padding: 1.25rem 1.4rem; box-shadow: 0 2px 12px rgba(253, 186, 116, .08);
+    height: 100%;
+  }
+  .report-panel h2 { font-size: .95rem; font-weight: 700; color: #1a1a2e; margin-bottom: .1rem; }
+  .report-panel .sub { font-size: .76rem; color: #9ca3af; margin-bottom: 1rem; }
+
+  .idea-list { list-style: none; padding: 0; margin: 0; }
+  .idea-list li {
+    display: flex; gap: .65rem; padding: .55rem 0; border-bottom: 1px dashed #f3e6d8; font-size: .84rem; color: #4b5563;
+  }
+  .idea-list li:last-child { border-bottom: none; }
+  .idea-list i { color: var(--v-orange-dark); font-size: 1rem; margin-top: .1rem; }
+  .idea-list strong { color: #1a1a2e; }
+    .booking-modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(26,26,46,.55);
+    z-index: 2000; align-items: center; justify-content: center; padding: 1.5rem;
+  }
+  .booking-modal-overlay.open { display: flex; }
+  .booking-modal {
+    background: #fff; border-radius: 14px; width: 100%; max-width: 960px;
+    max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  }
+  .booking-modal-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    padding: 1.1rem 1.4rem; border-bottom: 1px solid #f3e6d8; gap: 1rem;
+    position: relative;
+  }
+  .booking-modal-header::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 5px; height: 100%;
+    background: var(--status-accent, var(--v-orange-dark));
+  }
+  .booking-modal-header h3 {
+    margin: 0; font-size: 1.05rem; font-weight: 700; color: #1a1a2e;
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .booking-modal-header h3 .status-dot {
+    width: .6rem; height: .6rem; border-radius: 50%; background: var(--status-accent, var(--v-orange-dark));
+    flex-shrink: 0;
+  }
+  .booking-modal-sub { font-size: .8rem; color: #6b7280; margin-top: .2rem; }
+  .booking-modal-actions { display: flex; align-items: center; gap: .4rem; flex-shrink: 0; }
+  .booking-modal-close {
+    border: none; background: transparent; font-size: 1.5rem; line-height: 1; color: #6b7280;
+    cursor: pointer; padding: 0 .3rem;
+  }
+  .booking-modal-close:hover { color: #1a1a2e; }
+  .booking-modal-print-header { display: none; }
+  .booking-modal-body { overflow-y: auto; padding: 0; }
+  .booking-modal-empty { padding: 2.5rem; text-align: center; color: #9ca3af; }
+
+  /* ── Nicer table look inside the popup ─────────────────────────────── */
+  .booking-modal-table-wrap { padding: 0 1.4rem 1.4rem; }
+  #bookingModalTable {
+    width: 100%; border-collapse: separate; border-spacing: 0; font-size: .83rem;
+    border: 1px solid #f3e6d8; border-radius: 10px; overflow: hidden;
+  }
+  #bookingModalTable thead th {
+    position: sticky; top: 0; z-index: 1;
+    background: var(--v-cream); color: #7c2d12;
+    text-align: left; padding: .65rem .9rem; font-size: .72rem;
+    text-transform: uppercase; letter-spacing: .04em; font-weight: 700;
+    border-bottom: 1px solid #f3e6d8;
+  }
+  #bookingModalTable td {
+    padding: .6rem .9rem; border-bottom: 1px solid #f7f0e8; vertical-align: middle;
+  }
+  #bookingModalTable tbody tr:nth-child(even) { background: #fffaf3; }
+  #bookingModalTable tbody tr:hover { background: #fef3e2; }
+  #bookingModalTable tbody tr:last-child td { border-bottom: none; }
+  #bookingModalTable td.amount-cell { text-align: right; font-weight: 600; color: #1a1a2e; }
+  #bookingModalTable td.ref-cell { font-family: monospace; color: #6b7280; }
+  .modal-customer-name { font-weight: 600; color: #1a1a2e; }
+  .modal-customer-email { color: #9ca3af; font-size: .78rem; }
+
+  /* ── Print layout ───────────────────────────────────────────────────── */
+  @media print {
+    @page { size: A4 portrait; margin: 14mm 12mm; }
+    html, body { height: auto !important; }
+    body * { visibility: hidden; }
+    .booking-modal, .booking-modal * { visibility: visible; }
+    .booking-modal-overlay {
+      position: static; background: none; padding: 0; display: block !important;
+    }
+    .booking-modal {
+      position: static; max-height: none; max-width: 100%; width: 100%;
+      box-shadow: none; border-radius: 0; overflow: visible;
+    }
+    .booking-modal-header { display: none; }
+    .booking-modal-actions { display: none; }
+    .booking-modal-print-header {
+      display: block; margin-bottom: 14px; padding-bottom: 10px;
+      border-bottom: 2px solid #1a1a2e;
+    }
+    .pmh-brand { font-size: 16px; font-weight: 800; color: #1a1a2e; letter-spacing: .03em; }
+    .pmh-vendor { font-size: 12.5px; color: #333; margin-top: 2px; }
+    .pmh-meta { font-size: 10.5px; color: #666; margin-top: 4px; }
+    .booking-modal-body { overflow: visible; }
+    .booking-modal-table-wrap { padding: 0; }
+    #bookingModalTable {
+      width: 100%; border: 1px solid #ccc; border-radius: 0; font-size: 9.5px;
+    }
+    #bookingModalTable thead { display: table-header-group; }
+    #bookingModalTable thead th {
+      position: static; background: #eee !important; color: #000 !important;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+      border-bottom: 1px solid #aaa;
+    }
+    #bookingModalTable tbody tr { page-break-inside: avoid; }
+    #bookingModalTable tbody tr:nth-child(even) { background: #f7f7f7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    #bookingModalTable td { border-bottom: 1px solid #ddd; padding: 5px 8px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-graph-up-arrow me-2 text-primary"></i>Reports</h1>
+</div>
+
+<form method="get" id="reportFilters" class="d-flex flex-wrap align-items-center gap-3 mb-4">
+  <div class="period-pills">
+    <a href="?period=weekly&listing={{ selected_listing }}" class="{% if period == 'weekly' %}active{% endif %}">Weekly</a>
+    <a href="?period=monthly&listing={{ selected_listing }}" class="{% if period == 'monthly' %}active{% endif %}">Monthly</a>
+    <a href="?period=yearly&listing={{ selected_listing }}" class="{% if period == 'yearly' %}active{% endif %}">Yearly</a>
+  </div>
+
+  <div class="listing-select-wrap">
+    <select name="listing" class="form-select form-select-sm" onchange="document.getElementById('reportFilters').submit()">
+      <option value="all" {% if selected_listing == 'all' %}selected{% endif %}>All listings (combined)</option>
+      {% for svc in services %}
+      <option value="{{ svc.id }}" {% if selected_listing == svc.id|stringformat:"s" %}selected{% endif %}>{{ svc.name }}</option>
+      {% endfor %}
+    </select>
+    <input type="hidden" name="period" value="{{ period }}" id="periodHidden">
+  </div>
+
+  <span class="text-muted small ms-auto"><i class="bi bi-calendar-range me-1"></i>{{ range_label }}</span>
+</form>
+
+<!-- KPI cards -->
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="stat-card card-blue">
+      <div class="label">Total Bookings</div>
+      <div class="value">{{ kpi_total }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card card-green">
+      <div class="label">Confirmed</div>
+      <div class="value">{{ kpi_confirmed }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card card-red">
+      <div class="label">Cancelled</div>
+      <div class="value">{{ kpi_cancelled }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card card-orange">
+      <div class="label">Pending Approvals</div>
+      <div class="value">{{ kpi_pending }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Trend + breakdown charts -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-8">
+    <div class="report-panel">
+      <h2>Bookings Trend</h2>
+      <div class="sub">Total / confirmed / cancelled / pending, by {{ period }} period</div>
+      <canvas id="chartTrend" height="110"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="report-panel">
+      <h2>Status Breakdown</h2>
+      <div class="sub">Share of bookings in the selected range</div>
+      <canvas id="chartStatus" height="180"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Listing-wise breakdown table (always shows every listing) -->
+<div class="v-table-wrap">
+  <div class="v-table-head">Listing-wise performance ({{ range_label }})</div>
+  {% if listing_rows %}
+  <table class="v-table">
+    <thead>
+      <tr>
+        <th>Listing</th>
+        <th class="text-center">Total</th>
+        <th class="text-center">Confirmed</th>
+        <th class="text-center">Pending</th>
+        <th class="text-center">Cancelled</th>
+        <th class="text-center">Completed</th>
+        <th class="text-center">Conversion</th>
+        <th class="text-end">Avg. Booking Value</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in listing_rows %}
+      <tr>
+        <td class="fw-500">{{ row.service.name }}</td>
+        <td class="text-center">{{ row.total }}</td>
+        <td class="text-center">{{ row.confirmed }}</td>
+        <td class="text-center">{{ row.pending }}</td>
+        <td class="text-center">{{ row.cancelled }}</td>
+        <td class="text-center">{{ row.completed }}</td>
+        <td class="text-center">
+          {% if row.conversion_rate is not None %}{{ row.conversion_rate }}%{% else %}—{% endif %}
+        </td>
+        <td class="text-end">
+          {% if row.avg_booking_value %}{{ row.currency_symbol }}{{ row.avg_booking_value }}{% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="text-center text-muted py-5">
+    <i class="bi bi-graph-up display-4 d-block mb-2"></i>
+    No listings yet.
+  </div>
+  {% endif %}
+</div>
+
+<!-- More ideas -->
+<div class="report-panel mb-4">
+  <h2><i class="bi bi-lightbulb text-warning me-1"></i> More you could add to Reports</h2>
+  <div class="sub">Ideas for later — not built yet, just food for thought</div>
+  <ul class="idea-list">
+    <li><i class="bi bi-cash-coin"></i><div><strong>Revenue & payout trends</strong> — total revenue and average order value over the same weekly/monthly/yearly buckets, per listing.</div></li>
+    <li><i class="bi bi-eye"></i><div><strong>Views → bookings conversion</strong> — you already track <code>view_count</code> per listing; plot it against bookings to see which listings convert best.</div></li>
+    <li><i class="bi bi-clock-history"></i><div><strong>Booking lead time</strong> — how far in advance customers book (event_date − created_at), to spot last-minute vs. planned demand.</div></li>
+    <li><i class="bi bi-calendar-heart"></i><div><strong>Seasonality heatmap</strong> — a calendar heatmap of which months/weekdays get the most events booked.</div></li>
+    <li><i class="bi bi-x-octagon"></i><div><strong>Cancellation reasons breakdown</strong> — a pie of <code>cancellation_reason</code> / refund type to see why bookings fall through.</div></li>
+    <li><i class="bi bi-stopwatch"></i><div><strong>Response time</strong> — average time from a pending booking landing to your approve/decline action.</div></li>
+    <li><i class="bi bi-people"></i><div><strong>Repeat customers</strong> — % of bookings from a customer email/phone seen before.</div></li>
+    <li><i class="bi bi-download"></i><div><strong>Export</strong> — a "Download CSV / PDF" button on this page for offline reporting.</div></li>
+  </ul>
+</div>
+<!-- Booking detail popup, opened by clicking a doughnut slice -->
+<div id="bookingModalOverlay" class="booking-modal-overlay">
+  <div class="booking-modal" id="bookingModal">
+    <div class="booking-modal-header">
+      <div>
+        <h3><span class="status-dot" id="bookingModalDot"></span><span id="bookingModalTitle">Bookings</span></h3>
+        <div class="booking-modal-sub" id="bookingModalSub"></div>
+      </div>
+      <div class="booking-modal-actions">
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="bookingModalPrint"><i class="bi bi-printer"></i> Print</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="bookingModalDownload"><i class="bi bi-file-earmark-excel"></i> Download Excel</button>
+        <button type="button" class="booking-modal-close" id="bookingModalClose" aria-label="Close">&times;</button>
+      </div>
+    </div>
+
+    <!-- Shown only when printing -->
+    <div class="booking-modal-print-header">
+      <div class="pmh-brand">AnyBooking</div>
+      <div class="pmh-vendor">{{ vendor.name }}</div>
+      <div class="pmh-meta" id="bookingModalPrintMeta"></div>
+    </div>
+
+    <div class="booking-modal-body" id="bookingModalBody">
+      <div class="booking-modal-table-wrap">
+        <table class="v-table" id="bookingModalTable">
+          <thead>
+            <tr>
+              <th>Ref</th>
+              <th>Customer</th>
+              <th>Phone</th>
+              <th>Listing</th>
+              <th>Event Date</th>
+              <th>Guests</th>
+              <th>Amount</th>
+              <th>Booked On</th>
+            </tr>
+          </thead>
+          <tbody id="bookingModalTbody"></tbody>
+        </table>
+        <div class="booking-modal-empty" id="bookingModalEmpty" style="display:none;">No bookings in this category.</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const trendLabels    = {{ trend_labels_json|safe }};
+  const trendTotal     = {{ trend_total_json|safe }};
+  const trendConfirmed = {{ trend_confirmed_json|safe }};
+  const trendCancelled = {{ trend_cancelled_json|safe }};
+  const trendPending   = {{ trend_pending_json|safe }};
+  const statusLabels   = {{ status_labels_json|safe }};
+  const statusData     = {{ status_data_json|safe }};
+
+  const trendEl = document.getElementById('chartTrend');
+  if (trendEl) {
+    new Chart(trendEl, {
+      type: 'line',
+      data: {
+        labels: trendLabels,
+        datasets: [
+          { label: 'Total',     data: trendTotal,     borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.08)',  borderWidth: 2, tension: .3, pointRadius: 2, fill: true },
+          { label: 'Confirmed', data: trendConfirmed, borderColor: '#16a34a', backgroundColor: 'rgba(22,163,74,.08)',  borderWidth: 2, tension: .3, pointRadius: 2, fill: false },
+          { label: 'Cancelled', data: trendCancelled, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,.08)',  borderWidth: 2, tension: .3, pointRadius: 2, fill: false },
+          { label: 'Pending',   data: trendPending,   borderColor: '#d97706', backgroundColor: 'rgba(217,119,6,.08)',  borderWidth: 2, tension: .3, pointRadius: 2, fill: false },
+        ],
+      },
+      options: {
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } } },
+        scales: {
+          x: { ticks: { font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
+          y: { beginAtZero: true, ticks: { precision: 0, font: { size: 10 } } },
+        },
+      },
+    });
+  }
+
+    const statusEl = document.getElementById('chartStatus');
+  if (statusEl) {
+    new Chart(statusEl, {
+      type: 'doughnut',
+      data: {
+        labels: statusLabels,
+        datasets: [{
+          data: statusData,
+          backgroundColor: ['#16a34a', '#d97706', '#dc2626', '#3730a3'],
+          borderWidth: 0,
+        }],
+      },
+      options: {
+        cutout: '65%',
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } } },
+        onClick: (evt, elements) => {
+          if (!elements.length) return;
+          const idx = elements[0].index;
+          openBookingModal(statusKeys[idx], statusLabels[idx]);
+        },
+        onHover: (evt, elements) => {
+          evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+        },
+      },
+    });
+  }
+
+    // ── Booking detail popup ──────────────────────────────────────────────
+  const bookingRecords = {{ booking_records_json|safe }};
+  const statusKeys = ['confirmed', 'pending', 'cancelled', 'completed'];
+  const statusColors = { confirmed: '#16a34a', pending: '#d97706', cancelled: '#dc2626', completed: '#3730a3' };
+
+  const overlay = document.getElementById('bookingModalOverlay');
+  const modalTitle = document.getElementById('bookingModalTitle');
+  const modalSub = document.getElementById('bookingModalSub');
+  const modalDot = document.getElementById('bookingModalDot');
+  const modalPrintMeta = document.getElementById('bookingModalPrintMeta');
+  const tbody = document.getElementById('bookingModalTbody');
+  const emptyState = document.getElementById('bookingModalEmpty');
+  const table = document.getElementById('bookingModalTable');
+
+  function openBookingModal(statusKey, label) {
+    const rows = bookingRecords.filter(b => b.status === statusKey);
+    const accent = statusColors[statusKey] || '#f97316';
+    overlay.style.setProperty('--status-accent', accent);
+    modalDot.style.background = accent;
+    modalTitle.textContent = label + ' Bookings';
+    const countText = rows.length + ' booking' + (rows.length === 1 ? '' : 's') + ' \u2014 {{ range_label|escapejs }}';
+    modalSub.textContent = countText;
+    modalPrintMeta.textContent = countText + ' \u2014 Generated ' + new Date().toLocaleString();
+
+    tbody.innerHTML = '';
+    if (rows.length === 0) {
+      table.style.display = 'none';
+      emptyState.style.display = 'block';
+    } else {
+      table.style.display = '';
+      emptyState.style.display = 'none';
+      rows.forEach(b => {
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td class="ref-cell">' + b.confirmation_number + '</td>' +
+          '<td><div class="modal-customer-name">' + b.customer_name + '</div><div class="modal-customer-email">' + b.customer_email + '</div></td>' +
+          '<td class="small">' + b.customer_phone + '</td>' +
+          '<td>' + b.service_name + '</td>' +
+          '<td class="small">' + b.event_date + (b.event_time ? '<br><span class="text-muted">' + b.event_time + '</span>' : '') + '</td>' +
+          '<td class="text-center">' + b.guest_count + '</td>' +
+          '<td class="amount-cell">' + b.currency_symbol + b.total_amount + '</td>' +
+          '<td class="small">' + b.created_at + '</td>';
+        tbody.appendChild(tr);
+      });
+    }
+    overlay.dataset.status = statusKey;
+    overlay.dataset.label = label;
+    overlay.classList.add('open');
+  }
+
+  function closeBookingModal() {
+    overlay.classList.remove('open');
+  }
+
+  document.getElementById('bookingModalClose').addEventListener('click', closeBookingModal);
+
+  // Close when clicking outside the modal box (on the dark overlay itself).
+  overlay.addEventListener('click', function (e) {
+    if (e.target === overlay) closeBookingModal();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeBookingModal();
+  });
+
+  document.getElementById('bookingModalPrint').addEventListener('click', function () {
+    window.print();
+  });
+
+  document.getElementById('bookingModalDownload').addEventListener('click', function () {
+    const statusKey = overlay.dataset.status;
+    const label = overlay.dataset.label;
+    const rows = bookingRecords.filter(b => b.status === statusKey);
+
+    const sheetData = rows.map(b => ({
+      'Ref': b.confirmation_number,
+      'Customer': b.customer_name,
+      'Email': b.customer_email,
+      'Phone': b.customer_phone,
+      'Listing': b.service_name,
+      'Event Date': b.event_date,
+      'Event Time': b.event_time,
+      'Guests': b.guest_count,
+      'Amount': b.currency_symbol + b.total_amount,
+      'Booked On': b.created_at,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(sheetData);
+    ws['!cols'] = [
+      { wch: 14 }, { wch: 20 }, { wch: 24 }, { wch: 14 }, { wch: 16 },
+      { wch: 12 }, { wch: 10 }, { wch: 8 }, { wch: 12 }, { wch: 12 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, label.substring(0, 31));
+    XLSX.writeFile(wb, 'bookings_' + statusKey + '_{{ period }}.xlsx');
+  });
+})();
+</script>
+{% endblock %}

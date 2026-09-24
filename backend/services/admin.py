@@ -208,7 +208,7 @@ class VendorAdmin(LocationRestrictedMixin, ModelAdmin):
     inlines = [VendorStaffUserInline]
     fieldsets = (
         ('Vendor Details', {
-            'fields': ('name', 'phone', 'email', 'address', 'city', 'is_active'),
+            'fields': ('name', 'phone', 'email', 'address', 'city', 'registration_number', 'avatar', 'is_active'),
         }),
         ('Portal Access', {
             'fields': ('user', 'portal_status'),

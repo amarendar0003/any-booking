@@ -28,13 +28,18 @@
     }
 
     /* ---------- Sidebar ---------- */
-    .vendor-sidebar {
+        .vendor-sidebar {
       min-height: 100vh;
+      height: 100vh;
       background: linear-gradient(165deg, #1a1a2e 0%, #241b3d 52%, #3a2214 135%);
       color: #e2e8f0;
       width: 240px;
       flex-shrink: 0;
-      position: relative;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 1030;
+      overflow-y: auto;
       box-shadow: 6px 0 28px rgba(26, 26, 46, .18);
     }
     .vendor-sidebar::after {
@@ -101,7 +106,7 @@
     .vendor-sidebar nav { padding-top: .5rem; }
 
     /* ---------- Main / topbar ---------- */
-    .vendor-main { flex: 1; min-width: 0; padding: 1.4rem 2rem 2rem; }
+    .vendor-main { flex: 1; min-width: 0; margin-left: 240px; padding: 1.4rem 2rem 2rem; }
 
     .vendor-topbar {
       display: flex;
@@ -337,7 +342,7 @@
 
     @media (max-width: 768px) {
       .vendor-sidebar { display: none; }
-      .vendor-main { padding: 1rem; }
+      .vendor-main { margin-left: 0; padding: 1rem; }
     }
   </style>
   {% block extra_head %}{% endblock %}
@@ -355,8 +360,14 @@
       <a href="{% url 'vendor_dashboard' %}" class="nav-link {% block nav_dashboard %}{% endblock %}">
         <i class="bi bi-speedometer2"></i> Dashboard
       </a>
-      <a href="{% url 'vendor_bookings' %}" class="nav-link {% block nav_bookings %}{% endblock %}">
+            <a href="{% url 'vendor_bookings' %}" class="nav-link {% block nav_bookings %}{% endblock %}">
         <i class="bi bi-calendar3"></i> Bookings
+      </a>
+      <a href="{% url 'vendor_reports' %}" class="nav-link {% block nav_reports %}{% endblock %}">
+        <i class="bi bi-graph-up-arrow"></i> Reports
+      </a>
+      <a href="{% url 'vendor_profile' %}" class="nav-link {% block nav_profile %}{% endblock %}">
+        <i class="bi bi-person-circle"></i> Profile
       </a>
     </nav>
   </aside>
