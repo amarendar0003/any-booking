@@ -91,6 +91,7 @@ UNFOLD = {
                     {"title": "Vendors", "icon": "person", "link": "/admin/services/vendor/"},
                     {"title": "Categories", "icon": "category", "link": "/admin/services/category/"},
                     {"title": "Attributes", "icon": "tune", "link": "/admin/services/attributedefinition/"},
+                    {"title": "Home Background Images", "icon": "wallpaper", "link": "/admin/services/homebackgroundimage/"},
                 ],
             },
             {
