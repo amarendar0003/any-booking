@@ -104,7 +104,7 @@ class VendorApproveBookingTest(TestCase):
         response = self.client.post(reverse('vendor_approve_booking', args=[booking.id]))
 
         booking.refresh_from_db()
-        self.assertRedirects(response, reverse('vendor_login'))
+        self.assertRedirects(response, '/')
         self.assertEqual(booking.status, Booking.STATUS_PENDING)
 
     def test_approve_requires_post(self):
@@ -185,7 +185,7 @@ class VendorRolePermissionsTest(TestCase):
         User.objects.create_user(username='rando', password='pass1234')
         self.client.login(username='rando', password='pass1234')
         response = self.client.get(reverse('vendor_dashboard'))
-        self.assertRedirects(response, reverse('vendor_login'))
+        self.assertRedirects(response, '/')
 
 
 class VendorEditServicePhotosTest(TestCase):

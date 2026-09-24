@@ -3,8 +3,7 @@ from datetime import date
 from functools import wraps
 
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth import login, logout
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -37,12 +36,13 @@ def vendor_required(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return redirect('vendor_login')
+            # Single entry point: home-page Sign In modal.
+            return redirect('/')
         vendor, role = _resolve_vendor_role(request.user)
         if vendor is None:
             logout(request)
             messages.error(request, 'This account is not linked to a vendor.')
-            return redirect('vendor_login')
+            return redirect('/')
         return view_func(request, *args, vendor=vendor, role=role, **kwargs)
     return wrapper
 
@@ -60,23 +60,21 @@ def owner_required(view_func):
 
 
 def vendor_login_view(request):
+    """Deprecated standalone vendor login page — removed.
+
+    The single login entry point for customers, vendors and vendor staff is
+    the home-page nav Sign In modal (POST /accounts/login/, email + password).
+    Authenticated vendors are forwarded to their dashboard; everyone else
+    goes to the home page.
+    """
     if request.user.is_authenticated and _resolve_vendor_role(request.user)[0] is not None:
         return redirect('vendor_dashboard')
-
-    form = AuthenticationForm(data=request.POST or None)
-    if request.method == 'POST' and form.is_valid():
-        user = form.get_user()
-        if _resolve_vendor_role(user)[0] is not None:
-            login(request, user)
-            return redirect('vendor_dashboard')
-        messages.error(request, 'This account is not linked to a vendor.')
-
-    return render(request, 'vendors/login.html', {'form': form})
+    return redirect('/')
 
 
 def vendor_logout_view(request):
     logout(request)
-    return redirect('vendor_login')
+    return redirect('/')
 
 
 @vendor_required

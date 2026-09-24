@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin
 from django.contrib import messages
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
@@ -179,8 +180,26 @@ class VendorStaffUserInline(TabularInline):
     verbose_name_plural = 'Staff logins (can approve/cancel/refund bookings, not pricing or photos)'
 
 
+class VendorAdminForm(forms.ModelForm):
+    """Makes Vendor.email a required field in the admin form.
+
+    The DB column stays optional (blank=True) for legacy rows, but every
+    vendor added/edited through the admin must have an email so booking
+    notifications and portal logins work.
+    """
+
+    class Meta:
+        model = Vendor
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['email'].required = True
+
+
 @admin.register(Vendor)
 class VendorAdmin(LocationRestrictedMixin, ModelAdmin):
+    form = VendorAdminForm
     list_display = ('name', 'phone', 'email', 'city', 'is_active', 'notify_on_booking', 'service_count')
     list_editable = ('notify_on_booking',)
     list_filter = ('is_active', 'notify_on_booking', 'city__district__state__country', 'city__district__state')

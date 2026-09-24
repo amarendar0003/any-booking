@@ -3,6 +3,7 @@ Accounts views — signup, email OTP verification, password creation, login/logo
 All endpoints return JSON so they work seamlessly from the auth modal via fetch().
 """
 import logging
+import re
 
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
@@ -38,15 +39,24 @@ def _json_err(message: str, status: int = 400) -> JsonResponse:
 def signup_view(request):
     """
     POST /accounts/signup/
-    Body: { email, role }
+    Body: { name, phone, email, role }
     Creates an unverified user (or reuses an existing unverified one),
     generates a 5-minute OTP and emails it via Brevo.
+    Name is stored on the User (first_name); phone on UserProfile.
     """
     email = request.POST.get('email', '').strip().lower()
     role = request.POST.get('role', '').strip()
+    name = request.POST.get('name', '').strip()
+    phone = request.POST.get('phone', '').strip()
 
     if not email:
         return _json_err('Email is required.')
+    if not name:
+        return _json_err('Name is required.')
+    if not phone:
+        return _json_err('Phone number is required.')
+    if not re.fullmatch(r'[0-9+\-\s()]{7,20}', phone):
+        return _json_err('Please enter a valid phone number.')
     if role not in (UserProfile.ROLE_CUSTOMER, UserProfile.ROLE_VENDOR):
         return _json_err('Please select a valid role (customer or vendor).')
 
@@ -65,11 +75,14 @@ def signup_view(request):
                         'code has been sent.'
                     )
                 })
-            # Unverified or incomplete — allow resend
+            # Unverified or incomplete — allow resend and refresh details
             user = existing_user
+            user.first_name = name[:150]
+            user.save(update_fields=['first_name'])
             if profile:
                 profile.role = role
-                profile.save(update_fields=['role'])
+                profile.phone = phone
+                profile.save(update_fields=['role', 'phone'])
         else:
             # Create a new inactive user (no usable password yet)
             with transaction.atomic():
@@ -77,10 +90,11 @@ def signup_view(request):
                     username=email,
                     email=email,
                     password=None,  # No password until create-password step
+                    first_name=name[:150],
                 )
                 user.is_active = False  # Will activate after verification
                 user.save(update_fields=['is_active'])
-                UserProfile.objects.create(user=user, role=role)
+                UserProfile.objects.create(user=user, role=role, phone=phone)
 
         # Generate OTP and send email
         _, raw_otp = EmailVerificationToken.generate_for_user(user)
@@ -219,17 +233,23 @@ def login_view(request):
     if not email or not password:
         return _json_err('Email and password are required.')
 
-    # Django authenticate uses username field
+    # Django authenticate uses the username field; signup sets username = email,
+    # so email + password is the single login path for every role.
     user = authenticate(request, username=email, password=password)
     if user is None:
         return _json_err('Invalid email or password.', status=401)
 
+    # Superusers sign in via Django /admin/ only — never through this modal.
+    if user.is_superuser:
+        return _json_err('Please sign in from the admin console.', status=403)
+
     profile = getattr(user, 'profile', None)
 
     if profile is None:
-        # Legacy account without a profile (e.g. admin) — allow through
+        # Account without a UserProfile (e.g. vendor staff created via the
+        # Django admin) — allow through; _post_login_redirect routes them.
         login(request, user)
-        return _json_ok({'redirect': '/'})
+        return _json_ok({'redirect': _post_login_redirect(user)})
 
     if not profile.email_verified:
         return _json_err(
@@ -296,6 +316,14 @@ def _post_login_redirect(user) -> str:
     profile = getattr(user, 'profile', None)
     if profile and profile.role == UserProfile.ROLE_VENDOR:
         return '/vendor/dashboard/'
+    # Vendor owner/staff accounts created via the Django admin have no
+    # UserProfile — send them to the vendor portal as well.
+    try:
+        from vendors.views import _resolve_vendor_role
+        if _resolve_vendor_role(user)[0] is not None:
+            return '/vendor/dashboard/'
+    except Exception:
+        pass
     if user.is_staff or user.is_superuser:
         return '/admin/'
     return '/'
@@ -305,15 +333,18 @@ def _ensure_vendor_profile(user):
     """
     Auto-create a Vendor profile for users who signed up as vendor.
     Vendor.user is a OneToOneField on services.Vendor — auto-approved.
+    Uses the name and phone captured at signup.
     """
     try:
         from services.models import Vendor
         if not hasattr(user, 'vendor_profile'):
+            profile = getattr(user, 'profile', None)
+            phone = (getattr(profile, 'phone', '') or '')[:20]
             Vendor.objects.create(
                 user=user,
                 name=user.get_full_name() or user.email.split('@')[0],
                 email=user.email,
-                phone='',
+                phone=phone,
                 is_active=True,
             )
     except Exception:
