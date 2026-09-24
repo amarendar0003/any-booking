@@ -1106,7 +1106,7 @@ body.modal-open {
 
 /* ── List page header ───────────────────────────────────────────────────── */
 .list-header {
-  background: linear-gradient(140deg, #fed7aa 0%, #fb923c 48%, #ea580c 100%);
+  background: linear-gradient(140deg, #fb923c 48%, #ea580c 100%);
   padding: 10px 0;
   margin: 14px 20px 0;
   border-radius: 14px;

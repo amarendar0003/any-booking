@@ -1,0 +1,735 @@
+{% extends 'base.html' %}
+{% load static local_names %}
+
+{% block title %}Contact Us{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── AnyBooking Contact Page (Unique Design) ── */
+  .contact-wrapper {
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    padding-bottom: 70px;
+  }
+
+  /* ── Header Hero (Centered, Elegant, Non-generic) ── */
+  .contact-header {
+    background: linear-gradient(180deg, #fff7ed 0%, #fffaf5 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 60px 0 50px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .contact-header::before {
+    content: '';
+    position: absolute;
+    top: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(249, 115, 22, 0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .contact-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #ffedd5;
+    border: 1px solid #fdba74;
+    color: var(--primary-dark);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 6px 16px;
+    border-radius: 50px;
+    margin-bottom: 16px;
+  }
+
+  .contact-title {
+    font-size: 2.6rem;
+    font-weight: 900;
+    color: var(--navy);
+    letter-spacing: -0.5px;
+    margin-bottom: 14px;
+    line-height: 1.25;
+  }
+
+  .contact-title .brand-accent {
+    color: var(--primary);
+    position: relative;
+    display: inline-block;
+  }
+
+  .contact-subtitle {
+    font-size: 1.05rem;
+    color: var(--text-secondary);
+    max-width: 620px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* ── Primary Direct Contact Channels (3-Column Grid) ── */
+  .contact-hub-section {
+    margin-top: -30px;
+    position: relative;
+    z-index: 3;
+    margin-bottom: 50px;
+  }
+
+  .hub-card {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: 28px 24px;
+    box-shadow: 0 8px 24px rgba(124, 45, 18, 0.06);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    cursor: default;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .hub-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(124, 45, 18, 0.1);
+  }
+
+  .hub-icon-wrap {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.45rem;
+    margin-bottom: 18px;
+  }
+
+  .hub-icon-phone {
+    background: #ffedd5;
+    color: var(--primary-dark);
+    border: 1px solid #fdba74;
+  }
+
+  .hub-icon-mail {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+  }
+
+  .hub-icon-location {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+  }
+
+  .hub-tag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  .hub-main-text {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+    word-break: break-word;
+  }
+
+  .hub-sub-text {
+    font-size: 0.86rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border);
+    width: 100%;
+  }
+
+  /* ── Detailed Department Directory ── */
+  .section-label {
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--primary-dark);
+    margin-bottom: 8px;
+  }
+
+  .section-heading {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--navy);
+    margin-bottom: 12px;
+  }
+
+  .section-desc {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 28px;
+  }
+
+  .dept-card {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: 24px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 16px rgba(124, 45, 18, 0.04);
+    cursor: default;
+  }
+
+  .dept-card-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .dept-badge-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #fff7ed;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    border: 1px solid #fed7aa;
+    flex-shrink: 0;
+  }
+
+  .dept-name {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+  }
+
+  .dept-role {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .dept-body {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 18px;
+  }
+
+  .dept-pill-val {
+    margin-top: auto;
+    background: #fffaf5;
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--navy);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+  }
+
+  /* ── Support & Booking Commitments (4 Pillars) ── */
+  .commitments-card {
+    background: linear-gradient(135deg, #7c2d12 0%, #431407 100%);
+    border-radius: 20px;
+    color: #ffffff;
+    padding: 44px 36px;
+    margin-top: 50px;
+    margin-bottom: 50px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 14px 36px rgba(67, 20, 7, 0.16);
+  }
+
+  .commitments-card::after {
+    content: '';
+    position: absolute;
+    right: -60px;
+    top: -60px;
+    width: 240px;
+    height: 240px;
+    background: radial-gradient(circle, rgba(251, 146, 60, 0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .commitments-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+    color: #ffffff;
+  }
+
+  .commitments-sub {
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.82);
+    margin-bottom: 32px;
+    max-width: 650px;
+  }
+
+  .commit-grid-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .commit-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    color: #ffd166;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  .commit-heading {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 4px;
+  }
+
+  .commit-text {
+    font-size: 0.84rem;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.45;
+    margin-bottom: 0;
+  }
+
+  /* ── Frequently Asked Guidance (FAQ Cards) ── */
+  .faq-card {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: 22px 24px;
+    height: 100%;
+    box-shadow: 0 4px 14px rgba(124, 45, 18, 0.03);
+    cursor: default;
+  }
+
+  .faq-question {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .faq-question i {
+    color: var(--primary);
+    font-size: 1.1rem;
+  }
+
+  .faq-answer {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 0;
+  }
+
+  /* ── Full Width Brand Banner (Static) ── */
+  .brand-bottom-card {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 38px 36px;
+    box-shadow: 0 6px 22px rgba(124, 45, 18, 0.05);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: default;
+  }
+
+  .brand-bottom-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--primary-dark);
+    margin-bottom: 10px;
+  }
+
+  .brand-bottom-title {
+    font-size: 1.65rem;
+    font-weight: 800;
+    color: var(--navy);
+    margin-bottom: 10px;
+  }
+
+  .brand-bottom-desc {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    max-width: 680px;
+    margin: 0 auto 24px;
+    line-height: 1.6;
+  }
+
+  .brand-chips-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .brand-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+    border-radius: 50px;
+    padding: 8px 18px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--navy);
+  }
+
+  @media (max-width: 991px) {
+    .contact-title {
+      font-size: 2.15rem;
+    }
+    .commitments-card {
+      padding: 32px 24px;
+    }
+  }
+
+  @media (max-width: 576px) {
+    .contact-title {
+      font-size: 1.85rem;
+    }
+    .contact-header {
+      padding: 45px 0 40px;
+    }
+    .hub-card {
+      padding: 22px 18px;
+    }
+    .brand-bottom-card {
+      padding: 28px 20px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="contact-wrapper">
+
+  {# ── Unique Centered Header Hero ── #}
+  <section class="contact-header">
+    <div class="container position-relative">
+      <div class="contact-badge">
+        <i class="bi bi-headset"></i> AnyBooking Support &amp; Concierge
+      </div>
+      <h1 class="contact-title">
+        Get in Touch with <span class="brand-accent">AnyBooking</span>
+      </h1>
+      <p class="contact-subtitle">
+        Need help choosing a venue, listing your property, or managing an upcoming booking? Our concierge desk is here to provide dedicated support for every celebration.
+      </p>
+    </div>
+  </section>
+
+  {# ── 3-Column Primary Contact Hub (Static) ── #}
+  <div class="container contact-hub-section">
+    <div class="row g-4">
+      
+      <!-- Hub 1: Direct Helpline -->
+      <div class="col-md-4">
+        <div class="hub-card">
+          <div class="hub-icon-wrap hub-icon-phone">
+            <i class="bi bi-telephone-fill"></i>
+          </div>
+          <div class="hub-tag">Official Support Helpline</div>
+          <div class="hub-main-text">+91 9151000254</div>
+          <div class="hub-sub-text">
+            <i class="bi bi-clock me-1 text-primary"></i> Mon – Sat: 09:30 AM to 08:00 PM IST
+          </div>
+        </div>
+      </div>
+
+      <!-- Hub 2: Official Mail Desk -->
+      <div class="col-md-4">
+        <div class="hub-card">
+          <div class="hub-icon-wrap hub-icon-mail">
+            <i class="bi bi-envelope-fill"></i>
+          </div>
+          <div class="hub-tag">Customer Inquiries Desk</div>
+          <div class="hub-main-text">support@anybooking.com</div>
+          <div class="hub-sub-text">
+            <i class="bi bi-lightning-charge me-1 text-danger"></i> Typically answered within 2 to 4 business hours
+          </div>
+        </div>
+      </div>
+
+      <!-- Hub 3: Corporate Office -->
+      <div class="col-md-4">
+        <div class="hub-card">
+          <div class="hub-icon-wrap hub-icon-location">
+            <i class="bi bi-geo-alt-fill"></i>
+          </div>
+          <div class="hub-tag">Corporate Headquarters</div>
+          <div class="hub-main-text">Hyderabad, Telangana</div>
+          <div class="hub-sub-text">
+            <i class="bi bi-building me-1 text-warning"></i> AnyBooking Technologies · India
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  {# ── Departmental Assistance Directory (Unique Grid) ── #}
+  <section class="container mb-5">
+    <div class="text-center mb-4">
+      <div class="section-label">Department Directory</div>
+      <h2 class="section-heading">Connect with the Right Team</h2>
+      <p class="section-desc">We route your requests to specialized venue managers and service coordinators.</p>
+    </div>
+
+    <div class="row g-4">
+      
+      <!-- Dept 1: Guest & Booking Support -->
+      <div class="col-md-4">
+        <div class="dept-card">
+          <div class="dept-card-header">
+            <div class="dept-badge-icon">
+              <i class="bi bi-calendar-check-fill"></i>
+            </div>
+            <div>
+              <div class="dept-name">Guest Bookings</div>
+              <div class="dept-role">Customer Care</div>
+            </div>
+          </div>
+          <p class="dept-body">
+            Assistance with venue availability, date confirmations, booking lookups, slot rescheduling, and general celebration guidance.
+          </p>
+          <div class="dept-pill-val">
+            <i class="bi bi-envelope-check"></i> support@anybooking.com
+          </div>
+        </div>
+      </div>
+
+      <!-- Dept 2: Venue Owner Onboarding -->
+      <div class="col-md-4">
+        <div class="dept-card">
+          <div class="dept-card-header">
+            <div class="dept-badge-icon">
+              <i class="bi bi-shop"></i>
+            </div>
+            <div>
+              <div class="dept-name">Vendor Relations</div>
+              <div class="dept-role">Partnership Desk</div>
+            </div>
+          </div>
+          <p class="dept-body">
+            For banquet hall owners, convention centers, caterers, photographers, priests, and music band operators looking to partner.
+          </p>
+          <div class="dept-pill-val">
+            <i class="bi bi-briefcase"></i> partners@anybooking.com
+          </div>
+        </div>
+      </div>
+
+      <!-- Dept 3: Urgent Event-Day Assistance -->
+      <div class="col-md-4">
+        <div class="dept-card">
+          <div class="dept-card-header">
+            <div class="dept-badge-icon">
+              <i class="bi bi-shield-check"></i>
+            </div>
+            <div>
+              <div class="dept-name">Event-Day Support</div>
+              <div class="dept-role">Emergency Desk</div>
+            </div>
+          </div>
+          <p class="dept-body">
+            Immediate coordination for clients or vendors experiencing unexpected scheduling or on-site facility issues on the event day.
+          </p>
+          <div class="dept-pill-val">
+            <i class="bi bi-telephone-inbound"></i> +91 9151000254
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  {# ── AnyBooking Service Guarantees (Modern Banner) ── #}
+  <div class="container">
+    <div class="commitments-card">
+      <div class="row align-items-center mb-2">
+        <div class="col-lg-8">
+          <h3 class="commitments-title">Our Service Commitments</h3>
+          <p class="commitments-sub">
+            Whether you are booking an intimate gathering or a grand wedding mandap, AnyBooking is built on reliability, transparency, and verified quality.
+          </p>
+        </div>
+      </div>
+
+      <div class="row g-4 pt-2">
+        
+        <div class="col-sm-6 col-lg-3">
+          <div class="commit-grid-item">
+            <div class="commit-icon">
+              <i class="bi bi-patch-check-fill"></i>
+            </div>
+            <div>
+              <div class="commit-heading">Verified Venues</div>
+              <p class="commit-text">Every listed hall, lawn, and space is physically verified.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+          <div class="commit-grid-item">
+            <div class="commit-icon">
+              <i class="bi bi-cash-stack"></i>
+            </div>
+            <div>
+              <div class="commit-heading">Direct Pricing</div>
+              <p class="commit-text">Transparent estimates with no hidden broker markups.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+          <div class="commit-grid-item">
+            <div class="commit-icon">
+              <i class="bi bi-clock-history"></i>
+            </div>
+            <div>
+              <div class="commit-heading">Rapid Inquiries</div>
+              <p class="commit-text">Swift turnaround for booking status and confirmations.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+          <div class="commit-grid-item">
+            <div class="commit-icon">
+              <i class="bi bi-people-fill"></i>
+            </div>
+            <div>
+              <div class="commit-heading">Vendor Network</div>
+              <p class="commit-text">All-in-one catering, decor, priests, and music band options.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  {# ── Helpful Static Guidance & Common Questions ── #}
+  <section class="container mb-5">
+    <div class="text-center mb-4">
+      <div class="section-label">Helpful Information</div>
+      <h2 class="section-heading">Frequently Addressed Queries</h2>
+    </div>
+
+    <div class="row g-4">
+      
+      <div class="col-md-6">
+        <div class="faq-card">
+          <div class="faq-question">
+            <i class="bi bi-question-circle-fill"></i>
+            <span>How do I check venue availability for my date?</span>
+          </div>
+          <p class="faq-answer">
+            You can browse service categories from the top navigation to view active listings, or connect directly with our support desk specifying your preferred date and expected guest capacity.
+          </p>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="faq-card">
+          <div class="faq-question">
+            <i class="bi bi-question-circle-fill"></i>
+            <span>How do venue owners list their banquet halls?</span>
+          </div>
+          <p class="faq-answer">
+            Property owners and certified event vendors can partner with AnyBooking through our vendor portal. Our team will verify your facility amenities and assist you with onboarding.
+          </p>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="faq-card">
+          <div class="faq-question">
+            <i class="bi bi-question-circle-fill"></i>
+            <span>Can I track an existing booking confirmation?</span>
+          </div>
+          <p class="faq-answer">
+            Yes. Guests can use the "Find My Booking" tool in the navigation menu with their unique confirmation reference number and contact phone to view real-time reservation details.
+          </p>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="faq-card">
+          <div class="faq-question">
+            <i class="bi bi-question-circle-fill"></i>
+            <span>Are catering, priest, and music band services available?</span>
+          </div>
+          <p class="faq-answer">
+            Yes. Beyond banquet halls, AnyBooking features specialized event services including traditional priests, live music bands, professional catering teams, and event planners.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  {# ── Bottom Brand Showcase (Static, Unique Full-Width Card) ── #}
+  <div class="container">
+    <div class="brand-bottom-card">
+      <div class="brand-bottom-badge">
+        <i class="bi bi-stars"></i> AnyBooking Platform
+      </div>
+      <h3 class="brand-bottom-title">
+        Simplifying Celebrations Across India
+      </h3>
+      <p class="brand-bottom-desc">
+        From grand wedding mandaps and banquet halls to birthday spaces and corporate meets — AnyBooking connects you with verified venues and trusted service professionals.
+      </p>
+      <div class="brand-chips-wrap">
+        <span class="brand-chip"><i class="bi bi-check-circle-fill text-success"></i> 500+ Verified Spaces</span>
+        <span class="brand-chip"><i class="bi bi-check-circle-fill text-success"></i> 15+ Service Categories</span>
+        <span class="brand-chip"><i class="bi bi-check-circle-fill text-success"></i> Dedicated Support Desk</span>
+        <span class="brand-chip"><i class="bi bi-check-circle-fill text-success"></i> Transparent Booking</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
