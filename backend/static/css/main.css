@@ -226,7 +226,7 @@ body.modal-open {
 
 .navbar .nav-link {
   color: var(--text-secondary) !important;
-  font-weight: 500;
+  font-weight: 800;
   font-size: .87rem;
   display: inline-flex;
   align-items: center;
