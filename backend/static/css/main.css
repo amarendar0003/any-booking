@@ -1462,6 +1462,166 @@ body.modal-open {
   background: var(--primary-dark);
 }
 
+/* ── Venue filter sidebar ───────────────────────────────────────────────── */
+.venue-filter-card {
+  padding: 16px 16px 6px;
+}
+
+.venue-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.venue-filter-header h6 {
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: none;
+  letter-spacing: normal;
+  margin: 0;
+}
+
+.venue-filter-reset {
+  font-size: .74rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.venue-filter-reset:hover {
+  color: var(--primary-dark);
+}
+
+.venue-filter-section {
+  border-top: 1px solid var(--border);
+  padding: 12px 0;
+}
+
+.venue-filter-section:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.venue-filter-section summary {
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.venue-filter-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.venue-filter-section summary::after {
+  content: '\25BE';
+  color: var(--primary-dark);
+  font-size: .75rem;
+  transition: transform .15s;
+}
+
+.venue-filter-section[open] summary::after {
+  transform: rotate(180deg);
+}
+
+.venue-filter-options {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-checkbox-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: .82rem;
+  color: #475569;
+  cursor: pointer;
+  gap: 8px;
+}
+
+.filter-checkbox-row input[type="checkbox"] {
+  margin-right: 6px;
+  accent-color: var(--primary);
+}
+
+.filter-checkbox-row .facet-count {
+  font-size: .72rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.capacity-btn-grid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.capacity-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  padding: 7px 6px;
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  background: #fff;
+  transition: background .15s, color .15s, border-color .15s;
+}
+
+.capacity-btn input[type="radio"] {
+  display: none;
+}
+
+.capacity-btn:hover {
+  border-color: var(--primary);
+}
+
+.capacity-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.city-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.city-chip {
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--primary-dark);
+  text-decoration: none;
+  background: #fff;
+  transition: background .15s, color .15s;
+}
+
+.city-chip:hover {
+  background: #fff7ed;
+}
+
+.city-chip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
 /* ── List card grid ─────────────────────────────────────────────────────── */
 .list-card-grid {
   display: grid;

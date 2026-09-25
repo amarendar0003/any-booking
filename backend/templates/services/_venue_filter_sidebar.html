@@ -1,0 +1,72 @@
+{# Included from services/list.html only when category.slug == 'banquet_hall' #}
+<div class="sidebar-card venue-filter-card">
+
+  <div class="venue-filter-header">
+    <h6 class="mb-0"><i class="bi bi-sliders"></i> Filter Venues</h6>
+    <a href="{% url 'service_list_by_category' category.slug %}" class="venue-filter-reset">
+      <i class="bi bi-arrow-counterclockwise"></i> Reset All
+    </a>
+  </div>
+
+  <form id="venue-filter-form">
+
+    <details class="venue-filter-section" open>
+      <summary>Venue Type</summary>
+      <div class="venue-filter-options">
+        {% for opt in venue_type_options %}
+        <label class="filter-checkbox-row">
+          <span>
+            <input type="checkbox" name="venue_type" value="{{ opt.value }}" {% if opt.checked %}checked{% endif %}>
+            {{ opt.label }}
+          </span>
+          <span class="facet-count">{{ opt.count }}</span>
+        </label>
+        {% empty %}
+        <p class="text-muted small mb-0">No venue types configured yet.</p>
+        {% endfor %}
+      </div>
+    </details>
+
+    <details class="venue-filter-section" open>
+      <summary>Capacity (Guests)</summary>
+      <div class="capacity-btn-grid">
+        {% for key, label in capacity_labels %}
+        <label class="capacity-btn {% if capacity_display == key %}active{% endif %}">
+          <input type="radio" name="capacity" value="{% if key == 'any' %}{% else %}{{ key }}{% endif %}"
+                 {% if capacity_display == key %}checked{% endif %}>
+          {{ label }}
+        </label>
+        {% endfor %}
+      </div>
+    </details>
+
+    <details class="venue-filter-section" open>
+      <summary>Amenities</summary>
+      <div class="venue-filter-options">
+        {% for a in amenities_ctx %}
+        <label class="filter-checkbox-row">
+          <span>
+            <input type="checkbox" name="amenities" value="{{ a.slug }}" {% if a.checked %}checked{% endif %}>
+            <i class="bi {{ a.icon }}"></i> {{ a.label }}
+          </span>
+          <span class="facet-count">{{ a.count }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </details>
+
+  </form>
+
+  {% if popular_cities %}
+  <div class="venue-filter-section" style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px">
+    <h6 class="mb-2" style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary)">Popular Cities</h6>
+    <div class="city-chip-grid">
+      {% for c in popular_cities %}
+      <a href="{% url 'service_list_by_category' category.slug %}?city={{ c.id }}"
+         class="city-chip {% if selected_city == c.id|stringformat:'s' %}active{% endif %}">{{ c.name }}</a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>

@@ -124,100 +124,16 @@
         {% endfor %}
       </div>
 
-      {# Capacity filter (banquet hall only) #}
+      {# Venue filter sidebar: Venue Type / Capacity / Amenities / Popular Cities (banquet hall only) #}
       {% if category and category.slug == 'banquet_hall' %}
-      <div class="sidebar-card">
-        <h6>Capacity</h6>
-        <form method="get">
-          {% if category %}<input type="hidden" name="category" value="{{ category.slug }}">{% endif %}
-          <input type="hidden" name="q" value="{{ q }}">
-          {% if selected_district %}<input type="hidden" name="district" value="{{ selected_district }}">{% endif %}
-          {% if selected_city %}<input type="hidden" name="city" value="{{ selected_city }}">{% endif %}
-          {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
-          {% if hall_type %}<input type="hidden" name="hall_type" value="{{ hall_type }}">{% endif %}
-          <div class="d-flex gap-2 mb-2">
-            <input type="number" name="min_capacity" class="form-control form-control-sm"
-                   placeholder="Min" value="{{ min_capacity }}" style="border:1.5px solid #e2e8f0;border-radius:9px">
-          </div>
-          <button type="submit" class="btn-apply">Apply</button>
-        </form>
-      </div>
+        {% include 'services/_venue_filter_sidebar.html' %}
       {% endif %}
 
     </div>
 
     {# Results #}
-    <div style="flex:1;min-width:0">
-      {% if services %}
-      <div class="list-card-grid">
-        {% for svc in services %}
-        <div class="list-card position-relative">
-          {% if svc.is_featured %}
-            <span class="badge-featured">⭐ Featured</span>
-          {% endif %}
-
-          {% with img=svc.primary_image %}
-            {% if img %}
-              <img src="{{ img.image.url }}" class="card-img" alt="{{ svc.name }}">
-            {% else %}
-              <img src="{% static 'img/AnyBookingMainLogo.jpg' %}" class="card-img service-default-image" alt="{{ svc.name }}">
-            {% endif %}
-          {% endwith %}
-
-          <div class="card-body">
-            <div class="d-flex align-items-center gap-2 mb-1">
-              <span class="badge-category">{{ svc.category|local_cat_name:request }}</span>
-              {% if svc.city %}
-                <span class="text-muted" style="font-size:.73rem"><i class="bi bi-geo-alt"></i> {{ svc.city.name }}</span>
-              {% endif %}
-            </div>
-            <h6 class="fw-bold mb-1" style="font-size:.9rem;color:#0f172a">{{ svc.name }}</h6>
-            <p class="mb-2" style="font-size:.77rem;color:#64748b">{{ svc.vendor.name }}</p>
-
-            <div class="mb-2">
-              {% for av in svc.attribute_values.all|slice:":3" %}
-                {% if av.attribute.data_type == 'boolean' %}
-                  <span class="attr-badge {% if av.value_boolean %}attr-yes{% else %}attr-no{% endif %}">
-                    <i class="bi {% if av.value_boolean %}bi-check-circle{% else %}bi-x-circle{% endif %}"></i>
-                    {{ av.attribute|local_attr_name:request }}
-                  </span>
-                {% elif av.attribute.data_type == 'number' and av.value_number %}
-                  <span class="attr-badge attr-num">
-                    <i class="bi bi-people"></i> {{ av.value_number|floatformat:0 }}
-                  </span>
-                {% endif %}
-              {% endfor %}
-            </div>
-
-            {% if svc.avg_rating %}
-            <div class="mb-2" style="font-size:.78rem">
-              <span style="color:#f59e0b"><i class="bi bi-star-fill"></i> {{ svc.avg_rating|floatformat:1 }}</span>
-              <span class="text-muted">({{ svc.review_count }})</span>
-            </div>
-            {% endif %}
-
-            <div class="mt-auto d-flex align-items-center justify-content-between">
-              {% if svc.base_price %}
-                <div>
-                  <span class="service-price">{{ svc.currency_symbol }}{{ svc.base_price|floatformat:0 }}</span>
-                  <span class="text-muted" style="font-size:.73rem"> / {{ svc.price_unit }}</span>
-                </div>
-              {% else %}
-                <span class="text-muted" style="font-size:.8rem">Price on request</span>
-              {% endif %}
-              <a href="{% url 'service_detail' svc.slug %}" class="btn-view">View →</a>
-            </div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <div class="text-center py-5 text-muted">
-        <i class="bi bi-search display-4 d-block mb-3"></i>
-        <h5>No services found</h5>
-        <p>Try adjusting your filters or <a href="{% url 'service_list' %}">view all services</a>.</p>
-      </div>
-      {% endif %}
+    <div style="flex:1;min-width:0" id="results-container">
+      {% include 'services/_results.html' %}
     </div>
 
   </div>
@@ -262,5 +178,62 @@ function filterDistricts(stateId) {
 function filterCities(districtId) {
   loadOpts('cities', districtId, 'f-city', 'Cities');
 }
+
+// ── Venue filter sidebar: live (no reload) filtering ──────────────────────
+(function () {
+  const resultsEl = document.getElementById('results-container');
+  const searchForm = document.getElementById('filter-form');
+  const sidebarForm = document.getElementById('venue-filter-form');
+  const listUrl = window.location.pathname;
+  if (!resultsEl || !searchForm) return;
+
+  function buildParams() {
+    const params = new URLSearchParams();
+    new FormData(searchForm).forEach((v, k) => { if (v !== '') params.append(k, v); });
+    if (sidebarForm) {
+      new FormData(sidebarForm).forEach((v, k) => { if (v !== '') params.append(k, v); });
+    }
+    return params;
+  }
+
+  async function applyFiltersLive() {
+    const params = buildParams();
+    resultsEl.style.opacity = '.5';
+    try {
+      const res = await fetch(`${listUrl}?${params.toString()}&ajax=1`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      resultsEl.innerHTML = await res.text();
+    } finally {
+      resultsEl.style.opacity = '1';
+    }
+    const qs = params.toString();
+    history.pushState({}, '', qs ? `${listUrl}?${qs}` : listUrl);
+  }
+
+  // Sidebar checkboxes / capacity radios: filter instantly on change.
+  if (sidebarForm) {
+    sidebarForm.addEventListener('change', (e) => {
+      const btn = e.target.closest('.capacity-btn');
+      if (btn) {
+        sidebarForm.querySelectorAll('.capacity-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+      applyFiltersLive();
+    });
+  }
+
+  // Search strip (search box, location dropdowns, hall type, sort): apply
+  // without a full reload when the form is submitted (Apply button / Enter),
+  // and also right after a location dropdown changes.
+  searchForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    applyFiltersLive();
+  });
+  ['f-country', 'f-state', 'f-district', 'f-city'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => setTimeout(applyFiltersLive, 0));
+  });
+})();
 </script>
 {% endblock %}

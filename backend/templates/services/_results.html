@@ -1,0 +1,75 @@
+{% load static local_names %}
+<p class="list-header-count mb-3" style="color:#64748b;font-size:.85rem">
+  {{ services.count }} result{{ services.count|pluralize }} found
+</p>
+
+{% if services %}
+<div class="list-card-grid">
+  {% for svc in services %}
+  <div class="list-card position-relative">
+    {% if svc.is_featured %}
+      <span class="badge-featured">⭐ Featured</span>
+    {% endif %}
+
+    {% with img=svc.primary_image %}
+      {% if img %}
+        <img src="{{ img.image.url }}" class="card-img" alt="{{ svc.name }}">
+      {% else %}
+        <img src="{% static 'img/AnyBookingMainLogo.jpg' %}" class="card-img service-default-image" alt="{{ svc.name }}">
+      {% endif %}
+    {% endwith %}
+
+    <div class="card-body">
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <span class="badge-category">{{ svc.category|local_cat_name:request }}</span>
+        {% if svc.city %}
+          <span class="text-muted" style="font-size:.73rem"><i class="bi bi-geo-alt"></i> {{ svc.city.name }}</span>
+        {% endif %}
+      </div>
+      <h6 class="fw-bold mb-1" style="font-size:.9rem;color:#0f172a">{{ svc.name }}</h6>
+      <p class="mb-2" style="font-size:.77rem;color:#64748b">{{ svc.vendor.name }}</p>
+
+      <div class="mb-2">
+        {% for av in svc.attribute_values.all|slice:":3" %}
+          {% if av.attribute.data_type == 'boolean' %}
+            <span class="attr-badge {% if av.value_boolean %}attr-yes{% else %}attr-no{% endif %}">
+              <i class="bi {% if av.value_boolean %}bi-check-circle{% else %}bi-x-circle{% endif %}"></i>
+              {{ av.attribute|local_attr_name:request }}
+            </span>
+          {% elif av.attribute.data_type == 'number' and av.value_number %}
+            <span class="attr-badge attr-num">
+              <i class="bi bi-people"></i> {{ av.value_number|floatformat:0 }}
+            </span>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      {% if svc.avg_rating %}
+      <div class="mb-2" style="font-size:.78rem">
+        <span style="color:#f59e0b"><i class="bi bi-star-fill"></i> {{ svc.avg_rating|floatformat:1 }}</span>
+        <span class="text-muted">({{ svc.review_count }})</span>
+      </div>
+      {% endif %}
+
+      <div class="mt-auto d-flex align-items-center justify-content-between">
+        {% if svc.base_price %}
+          <div>
+            <span class="service-price">{{ svc.currency_symbol }}{{ svc.base_price|floatformat:0 }}</span>
+            <span class="text-muted" style="font-size:.73rem"> / {{ svc.price_unit }}</span>
+          </div>
+        {% else %}
+          <span class="text-muted" style="font-size:.8rem">Price on request</span>
+        {% endif %}
+        <a href="{% url 'service_detail' svc.slug %}" class="btn-view">View →</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-search display-4 d-block mb-3"></i>
+  <h5>No services found</h5>
+  <p>Try adjusting your filters or <a href="{% if category %}{% url 'service_list_by_category' category.slug %}{% else %}{% url 'service_list' %}{% endif %}">view all services</a>.</p>
+</div>
+{% endif %}
