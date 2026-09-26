@@ -13,7 +13,8 @@ from .admin_mixins import LocationRestrictedMixin
 from .models import (
     Country, State, District, City,
     Category, AttributeDefinition, AttributeLocalName, RegionalCategoryConfig,
-    Vendor, VendorStaffUser, Service, ServiceAttributeValue, ServiceImage, StaffProfile,
+    Vendor, VendorStaffUser, HallDetails, BankDetails,
+    Service, ServiceAttributeValue, ServiceImage, StaffProfile,
     HomeBackgroundImage,
 )
 
@@ -180,6 +181,26 @@ class VendorStaffUserInline(TabularInline):
     verbose_name_plural = 'Staff logins (can approve/cancel/refund bookings, not pricing or photos)'
 
 
+class HallDetailsInline(StackedInline):
+    model = HallDetails
+    extra = 1
+    max_num = 1
+    can_delete = False
+    fields = ('hall_name', 'business_registration_number', 'gst_number', 'trade_license_number', 'pan_number')
+    verbose_name = 'Hall Details'
+    verbose_name_plural = 'Hall Details'
+
+
+class BankDetailsInline(StackedInline):
+    model = BankDetails
+    extra = 1
+    max_num = 1
+    can_delete = False
+    fields = ('account_holder_name', 'bank_name', 'account_number', 'ifsc_code', 'branch_name', 'account_type')
+    verbose_name = 'Bank Details'
+    verbose_name_plural = 'Bank Details'
+
+
 class VendorAdminForm(forms.ModelForm):
     """Makes Vendor.email a required field in the admin form.
 
@@ -205,10 +226,14 @@ class VendorAdmin(LocationRestrictedMixin, ModelAdmin):
     list_filter = ('is_active', 'notify_on_booking', 'city__district__state__country', 'city__district__state')
     search_fields = ('name', 'phone', 'city__name')
     readonly_fields = ('portal_status',)
-    inlines = [VendorStaffUserInline]
+    inlines = [HallDetailsInline, BankDetailsInline, VendorStaffUserInline]
+
+    class Media:
+        js = ('js/admin_vendor_geolocation.js',)
+
     fieldsets = (
         ('Vendor Details', {
-            'fields': ('name', 'phone', 'email', 'address', 'city', 'registration_number', 'avatar', 'is_active'),
+            'fields': ('name', 'phone', 'email', 'address', 'city', 'avatar', 'is_active'),
         }),
         ('Portal Access', {
             'fields': ('user', 'portal_status'),
@@ -216,6 +241,13 @@ class VendorAdmin(LocationRestrictedMixin, ModelAdmin):
                 'To link an existing account pick it from the dropdown above. '
                 'To create a brand-new login use the link below.'
             ),
+        }),
+        ('Owner Details', {
+            'fields': ('owner_name', 'owner_email', 'owner_phone'),
+        }),
+        ('Contact Details', {
+            'fields': ('contact_person_name', 'contact_phone', 'contact_email'),
+            'description': 'Day-to-day operational contact, if different from the owner.',
         }),
         ('Booking Notifications', {
             'fields': ('notify_on_booking',),

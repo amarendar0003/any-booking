@@ -1,3 +1,4 @@
+from django.core.validators import RegexValidator
 from django.db import models
 from django.utils.text import slugify
 
@@ -294,11 +295,10 @@ class Vendor(models.Model):
     phone = models.CharField(max_length=20)
     address = models.TextField(blank=True)
     city = models.ForeignKey(City, on_delete=models.SET_NULL, null=True, blank=True, related_name='vendors')
-    registration_number = models.CharField(
-        max_length=100, blank=True,
-        help_text='Business / GST / trade license registration number, shown read-only on the vendor profile page.',
+    avatar = models.ImageField(
+        upload_to='vendors/avatars/', blank=True, null=True,
+        verbose_name='Logo',
     )
-    avatar = models.ImageField(upload_to='vendors/avatars/', blank=True, null=True)
     is_active = models.BooleanField(default=True)
     notify_on_booking = models.BooleanField(
         default=True,
@@ -306,8 +306,86 @@ class Vendor(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # ── Owner details ───────────────────────────────────────────────────
+    # The person who owns/represents the business, for legal/verification
+    # purposes. May differ from the day-to-day operational contact below.
+    owner_name = models.CharField(max_length=200, blank=True)
+    owner_email = models.EmailField(blank=True)
+    owner_phone = models.CharField(max_length=20, blank=True)
+
+    # ── Contact details ─────────────────────────────────────────────────
+    # The person to reach for day-to-day operational matters (bookings,
+    # coordination), which may be different from the owner above.
+    contact_person_name = models.CharField(max_length=200, blank=True)
+    contact_phone = models.CharField(max_length=20, blank=True)
+    contact_email = models.EmailField(blank=True)
+
     def __str__(self):
         return self.name
+
+
+class HallDetails(models.Model):
+    """Registration / legal details for the vendor's hall or venue."""
+    vendor = models.OneToOneField(Vendor, on_delete=models.CASCADE, related_name='hall_details')
+    hall_name = models.CharField(max_length=200, blank=True)
+    business_registration_number = models.CharField(max_length=100, blank=True)
+    gst_number = models.CharField(
+        max_length=15, blank=True,
+        verbose_name='GST',
+        validators=[RegexValidator(
+            regex=r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$',
+            message='Enter a valid 15-character GST number (e.g. 22AAAAA0000A1Z5).',
+        )],
+        help_text='15-character GST Identification Number (GSTIN).',
+    )
+    trade_license_number = models.CharField(max_length=100, blank=True, verbose_name='Trade License')
+    pan_number = models.CharField(
+        max_length=10, blank=True,
+        verbose_name='PAN Number',
+        validators=[RegexValidator(
+            regex=r'^[A-Z]{5}[0-9]{4}[A-Z]{1}$',
+            message='Enter a valid PAN number (e.g. ABCDE1234F).',
+        )],
+    )
+
+    class Meta:
+        verbose_name = 'Hall Details'
+        verbose_name_plural = 'Hall Details'
+
+    def __str__(self):
+        return self.hall_name or f'Hall details for {self.vendor.name}'
+
+
+class BankDetails(models.Model):
+    """Bank account details used for vendor payouts."""
+    ACCOUNT_TYPE_CHOICES = (
+        ('savings', 'Savings'),
+        ('current', 'Current'),
+    )
+
+    vendor = models.OneToOneField(Vendor, on_delete=models.CASCADE, related_name='bank_details')
+    account_holder_name = models.CharField(max_length=200, blank=True)
+    bank_name = models.CharField(max_length=200, blank=True)
+    account_number = models.CharField(max_length=30, blank=True)
+    ifsc_code = models.CharField(
+        max_length=11, blank=True,
+        verbose_name='IFSC Code',
+        validators=[RegexValidator(
+            regex=r'^[A-Z]{4}0[A-Z0-9]{6}$',
+            message='Enter a valid 11-character IFSC code (e.g. SBIN0001234).',
+        )],
+    )
+    branch_name = models.CharField(max_length=200, blank=True)
+    account_type = models.CharField(
+        max_length=10, choices=ACCOUNT_TYPE_CHOICES, blank=True, default='savings',
+    )
+
+    class Meta:
+        verbose_name = 'Bank Details'
+        verbose_name_plural = 'Bank Details'
+
+    def __str__(self):
+        return f'Bank details for {self.vendor.name}'
 
 
 class VendorStaffUser(models.Model):

@@ -94,9 +94,9 @@
 
     <div class="field-group">
       <label>Registration Number</label>
-      <div class="field-value {% if not vendor.registration_number %}muted{% endif %}">
+      <div class="field-value {% if not vendor.hall_details.business_registration_number %}muted{% endif %}">
         <i class="bi bi-file-earmark-text"></i>
-        {{ vendor.registration_number|default:"Not on file" }}
+        {{ vendor.hall_details.business_registration_number|default:"Not on file" }}
       </div>
     </div>
 

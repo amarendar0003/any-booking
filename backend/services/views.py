@@ -406,11 +406,16 @@ def service_detail(request, slug):
     })
 
 
-def match_location(country_code, state_name):
-    """Match an ISO country code and a (fuzzy) state name to active Country/State rows."""
+def match_location(country_code, state_name, city_name=None):
+    """Match an ISO country code and (fuzzy) state/city names to active Country/State/City rows."""
     country_code = (country_code or '').upper()
     state_name = (state_name or '').strip()
-    result = {'country_id': None, 'country_name': None, 'state_id': None, 'state_name': None}
+    city_name = (city_name or '').strip()
+    result = {
+        'country_id': None, 'country_name': None,
+        'state_id': None, 'state_name': None,
+        'city_id': None, 'city_name': None,
+    }
     if not country_code:
         return result
     country = Country.objects.filter(code=country_code, is_active=True).first()
@@ -426,6 +431,18 @@ def match_location(country_code, state_name):
         if state:
             result['state_id'] = state.id
             result['state_name'] = state.name
+            if city_name:
+                city = (
+                    City.objects.filter(
+                        district__state=state, name__iexact=city_name, is_active=True,
+                    ).first()
+                    or City.objects.filter(
+                        district__state=state, name__icontains=city_name, is_active=True,
+                    ).first()
+                )
+                if city:
+                    result['city_id'] = city.id
+                    result['city_name'] = city.name
     return result
 
 
@@ -445,9 +462,11 @@ def location_ajax(request):
     elif kind == 'cities_by_state' and parent_id:
         data = list(City.objects.filter(district__state_id=parent_id, is_active=True).order_by('name').values('id', 'name'))
     elif kind == 'match':
-        # Auto-detect: find country by ISO code, then state by name (fuzzy)
+        # Auto-detect: find country by ISO code, then state (and optionally city) by name (fuzzy)
         result = match_location(
-            request.GET.get('country_code', ''), request.GET.get('state_name', '')
+            request.GET.get('country_code', ''),
+            request.GET.get('state_name', ''),
+            request.GET.get('city_name', ''),
         )
         return JsonResponse(result)
     else:
@@ -503,4 +522,4 @@ def chatbot_chat(request):
         return JsonResponse({'error': 'Message cannot be empty'}, status=400)
 
     result = ask_assistant(message=message, history=history)
-    return JsonResponse(result)
+    return JsonResponse(result)
