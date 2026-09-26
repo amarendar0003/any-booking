@@ -16,6 +16,8 @@ from bookings.emails import send_booking_approved, send_booking_cancelled
 from bookings.models import Booking
 from services.models import Service, ServiceImage
 
+from .models import GalleryPhoto, ServiceVendor, ServiceVendorBlockedDate, StaffMember
+
 
 def _resolve_vendor_role(user):
     """Returns (vendor, role) for a vendor-portal user, or (None, None).
@@ -603,3 +605,340 @@ def vendor_profile(request, vendor=None, role=None):
         'vendor': vendor,
         'role': role,
     })
+
+# ── Service Management (outsourced service vendors) ─────────────────────────
+
+SERVICE_VENDOR_FORM_FIELDS = ('name', 'phone', 'email', 'address', 'service_type', 'pricing_type', 'price')
+
+
+_EMPTY_SV_POST = {'name': '', 'phone': '', 'email': '', 'address': '', 'service_type': '', 'pricing_type': '', 'price': ''}
+
+
+def _service_vendor_form_context(vendor, sv=None, errors=None, posted=None):
+    merged_posted = dict(_EMPTY_SV_POST)
+    if posted:
+        for key in _EMPTY_SV_POST:
+            merged_posted[key] = posted.get(key, '')
+    return {
+        'vendor': vendor,
+        'service_vendor': sv,
+        'service_type_choices': ServiceVendor.SERVICE_TYPE_CHOICES,
+        'pricing_type_choices': ServiceVendor.PRICING_TYPE_CHOICES,
+        'errors': errors or {},
+        'posted': merged_posted,
+    }
+
+
+def _save_service_vendor_from_post(request, sv):
+    errors = {}
+    name = request.POST.get('name', '').strip()
+    phone = request.POST.get('phone', '').strip()
+    email = request.POST.get('email', '').strip()
+    address = request.POST.get('address', '').strip()
+    service_type = request.POST.get('service_type', '').strip()
+    pricing_type = request.POST.get('pricing_type', '').strip()
+    price_raw = request.POST.get('price', '').strip()
+
+    if not name:
+        errors['name'] = 'Name is required.'
+    if not phone:
+        errors['phone'] = 'Phone is required.'
+    if service_type not in dict(ServiceVendor.SERVICE_TYPE_CHOICES):
+        errors['service_type'] = 'Select a valid type of service.'
+    if pricing_type not in dict(ServiceVendor.PRICING_TYPE_CHOICES):
+        errors['pricing_type'] = 'Select a valid pricing type.'
+    try:
+        price = float(price_raw)
+        if price < 0:
+            raise ValueError
+    except ValueError:
+        errors['price'] = 'Enter a valid price.'
+        price = None
+
+    if errors:
+        return errors
+
+    sv.name = name
+    sv.phone = phone
+    sv.email = email
+    sv.address = address
+    sv.service_type = service_type
+    sv.pricing_type = pricing_type
+    sv.price = price
+    sv.save()
+    return None
+
+
+@vendor_required
+def vendor_service_management(request, vendor=None, role=None):
+    service_vendors = vendor.outsourced_services.all()
+    selected_type = request.GET.get('type', '')
+    if selected_type:
+        service_vendors = service_vendors.filter(service_type=selected_type)
+
+    today = timezone.localdate()
+    cards = []
+    for sv in service_vendors:
+        is_available_today = not sv.blocked_dates.filter(date=today).exists()
+        cards.append({'sv': sv, 'is_available_today': is_available_today})
+
+    return render(request, 'vendors/service_management.html', {
+        'vendor': vendor,
+        'role': role,
+        'cards': cards,
+        'service_type_choices': ServiceVendor.SERVICE_TYPE_CHOICES,
+        'selected_type': selected_type,
+    })
+
+
+@vendor_required
+def vendor_add_service_vendor(request, vendor=None, role=None):
+    if request.method == 'POST':
+        sv = ServiceVendor(vendor=vendor)
+        errors = _save_service_vendor_from_post(request, sv)
+        if errors:
+            return render(request, 'vendors/service_vendor_form.html',
+                          _service_vendor_form_context(vendor, errors=errors, posted=request.POST))
+        messages.success(request, f'{sv.name} added to your outsourced services.')
+        return redirect('vendor_service_management')
+
+    return render(request, 'vendors/service_vendor_form.html', _service_vendor_form_context(vendor))
+
+
+@vendor_required
+def vendor_edit_service_vendor(request, sv_id, vendor=None, role=None):
+    sv = get_object_or_404(ServiceVendor, pk=sv_id, vendor=vendor)
+
+    if request.method == 'POST':
+        errors = _save_service_vendor_from_post(request, sv)
+        if errors:
+            return render(request, 'vendors/service_vendor_form.html',
+                          _service_vendor_form_context(vendor, sv=sv, errors=errors, posted=request.POST))
+        messages.success(request, f'{sv.name} updated.')
+        return redirect('vendor_service_vendor_detail', sv_id=sv.pk)
+
+    return render(request, 'vendors/service_vendor_form.html', _service_vendor_form_context(vendor, sv=sv))
+
+
+def _build_service_vendor_calendar(request, sv, today):
+    try:
+        cal_year = int(request.GET.get('year', today.year))
+        cal_month = int(request.GET.get('month', today.month))
+    except (TypeError, ValueError):
+        cal_year, cal_month = today.year, today.month
+
+    if cal_month < 1:
+        cal_month, cal_year = 12, cal_year - 1
+    elif cal_month > 12:
+        cal_month, cal_year = 1, cal_year + 1
+
+    blocked_days = set(
+        sv.blocked_dates.filter(date__year=cal_year, date__month=cal_month).values_list('date__day', flat=True)
+    )
+
+    weeks = []
+    for week in cal_module.Calendar(firstweekday=6).monthdayscalendar(cal_year, cal_month):
+        week_days = []
+        for day in week:
+            if day == 0:
+                week_days.append(None)
+                continue
+            day_date = date(cal_year, cal_month, day)
+            week_days.append({
+                'day': day,
+                'date': day_date.isoformat(),
+                'status': 'booked' if day in blocked_days else 'available',
+                'is_today': day_date == today,
+            })
+        weeks.append(week_days)
+
+    prev_month, prev_year = (12, cal_year - 1) if cal_month == 1 else (cal_month - 1, cal_year)
+    next_month, next_year = (1, cal_year + 1) if cal_month == 12 else (cal_month + 1, cal_year)
+
+    return {
+        'calendar_weeks': weeks,
+        'calendar_weekday_labels': ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+        'calendar_month_label': date(cal_year, cal_month, 1).strftime('%B %Y'),
+        'calendar_prev': {'month': prev_month, 'year': prev_year},
+        'calendar_next': {'month': next_month, 'year': next_year},
+        'calendar_current': {'month': cal_month, 'year': cal_year},
+    }
+
+
+@vendor_required
+def vendor_service_vendor_detail(request, sv_id, vendor=None, role=None):
+    sv = get_object_or_404(ServiceVendor, pk=sv_id, vendor=vendor)
+    today = timezone.localdate()
+    calendar_ctx = _build_service_vendor_calendar(request, sv, today)
+
+    return render(request, 'vendors/service_vendor_detail.html', {
+        'vendor': vendor,
+        'role': role,
+        'sv': sv,
+        'today': today,
+        **calendar_ctx,
+    })
+
+
+@require_POST
+@vendor_required
+def vendor_toggle_service_vendor_date(request, sv_id, vendor=None, role=None):
+    sv = get_object_or_404(ServiceVendor, pk=sv_id, vendor=vendor)
+    date_raw = request.POST.get('date', '')
+    try:
+        y, m, d = (int(p) for p in date_raw.split('-'))
+        day = date(y, m, d)
+    except (ValueError, TypeError):
+        messages.error(request, 'Invalid date.')
+        return redirect('vendor_service_vendor_detail', sv_id=sv.pk)
+
+    existing = sv.blocked_dates.filter(date=day).first()
+    if existing:
+        existing.delete()
+        messages.success(request, f'{day.strftime("%d %b %Y")} marked available.')
+    else:
+        ServiceVendorBlockedDate.objects.create(service_vendor=sv, date=day)
+        messages.success(request, f'{day.strftime("%d %b %Y")} marked unavailable.')
+
+    next_url = request.POST.get('next') or reverse('vendor_service_vendor_detail', args=[sv.pk])
+    return redirect(next_url)
+
+
+@require_POST
+@vendor_required
+def vendor_log_service_vendor_use(request, sv_id, vendor=None, role=None):
+    sv = get_object_or_404(ServiceVendor, pk=sv_id, vendor=vendor)
+    sv.times_opted = sv.times_opted + 1
+    sv.save(update_fields=['times_opted'])
+    messages.success(request, f'Logged another use of {sv.name}. Total: {sv.times_opted}.')
+    next_url = request.POST.get('next') or reverse('vendor_service_management')
+    return redirect(next_url)
+
+
+@require_POST
+@vendor_required
+def vendor_toggle_service_vendor_status(request, sv_id, vendor=None, role=None):
+    sv = get_object_or_404(ServiceVendor, pk=sv_id, vendor=vendor)
+    sv.is_active = not sv.is_active
+    sv.save(update_fields=['is_active'])
+    messages.success(request, f'{sv.name} marked {"active" if sv.is_active else "inactive"}.')
+    next_url = request.POST.get('next') or reverse('vendor_service_management')
+    return redirect(next_url)
+
+
+@require_POST
+@vendor_required
+def vendor_delete_service_vendor(request, sv_id, vendor=None, role=None):
+    sv = get_object_or_404(ServiceVendor, pk=sv_id, vendor=vendor)
+    name = sv.name
+    sv.delete()
+    messages.success(request, f'{name} removed from your outsourced services.')
+    return redirect('vendor_service_management')
+
+
+# ── Staff ────────────────────────────────────────────────────────────────
+
+@vendor_required
+def vendor_staff(request, vendor=None, role=None):
+    staff_members = vendor.staff_members.all()
+    return render(request, 'vendors/staff.html', {
+        'vendor': vendor,
+        'role': role,
+        'staff_members': staff_members,
+    })
+
+
+def _save_staff_from_post(request, staff):
+    errors = {}
+    name = request.POST.get('name', '').strip()
+    phone = request.POST.get('phone', '').strip()
+    if not name:
+        errors['name'] = 'Name is required.'
+    if not phone:
+        errors['phone'] = 'Phone is required.'
+    if errors:
+        return errors
+
+    staff.name = name
+    staff.phone = phone
+    staff.role = request.POST.get('role', '').strip()
+    staff.email = request.POST.get('email', '').strip()
+    staff.address = request.POST.get('address', '').strip()
+    staff.save()
+    return None
+
+
+@require_POST
+@vendor_required
+def vendor_add_staff(request, vendor=None, role=None):
+    staff = StaffMember(vendor=vendor)
+    errors = _save_staff_from_post(request, staff)
+    if errors:
+        for msg in errors.values():
+            messages.error(request, msg)
+    else:
+        messages.success(request, f'{staff.name} added to your staff.')
+    return redirect('vendor_staff')
+
+
+@require_POST
+@vendor_required
+def vendor_edit_staff(request, staff_id, vendor=None, role=None):
+    staff = get_object_or_404(StaffMember, pk=staff_id, vendor=vendor)
+    errors = _save_staff_from_post(request, staff)
+    if errors:
+        for msg in errors.values():
+            messages.error(request, msg)
+    else:
+        messages.success(request, f'{staff.name} updated.')
+    return redirect('vendor_staff')
+
+
+@require_POST
+@vendor_required
+def vendor_delete_staff(request, staff_id, vendor=None, role=None):
+    staff = get_object_or_404(StaffMember, pk=staff_id, vendor=vendor)
+    name = staff.name
+    staff.delete()
+    messages.success(request, f'{name} removed from your staff.')
+    return redirect('vendor_staff')
+
+
+# ── Gallery ──────────────────────────────────────────────────────────────
+
+@vendor_required
+def vendor_gallery(request, vendor=None, role=None):
+    photos = vendor.gallery_photos.all()
+    return render(request, 'vendors/gallery.html', {
+        'vendor': vendor,
+        'role': role,
+        'photos': photos,
+    })
+
+
+@require_POST
+@vendor_required
+def vendor_upload_gallery_photo(request, vendor=None, role=None):
+    name = request.POST.get('name', '').strip()
+    image = request.FILES.get('image')
+
+    if not name:
+        messages.error(request, 'Please give the photo a name.')
+    elif not image:
+        messages.error(request, 'Please choose a photo to upload.')
+    else:
+        GalleryPhoto.objects.create(vendor=vendor, name=name, image=image)
+        messages.success(request, f'"{name}" uploaded to your gallery.')
+
+    return redirect('vendor_gallery')
+
+
+@require_POST
+@vendor_required
+def vendor_delete_gallery_photo(request, photo_id, vendor=None, role=None):
+    photo = get_object_or_404(GalleryPhoto, pk=photo_id, vendor=vendor)
+    name = photo.name
+    photo.image.delete(save=False)
+    photo.delete()
+    messages.success(request, f'"{name}" removed from your gallery.')
+    return redirect('vendor_gallery')

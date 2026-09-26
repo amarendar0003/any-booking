@@ -1,0 +1,93 @@
+
+{% extends "vendors/base.html" %}
+
+{% block title %}{% if service_vendor %}Edit Service{% else %}Add Service{% endif %}{% endblock %}
+{% block nav_service_management %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+  .sv-form-card {
+    background: #fff; border: 1px solid #f3e6d8; border-radius: 16px;
+    padding: 2rem; max-width: 640px; box-shadow: 0 2px 14px rgba(253, 186, 116, .08);
+  }
+  .sv-form-card label { font-weight: 600; font-size: .85rem; color: #4b5563; }
+  .sv-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 1.2rem; }
+  @media (max-width: 640px) { .sv-form-row { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>
+    <i class="bi bi-diagram-3 me-2 text-primary"></i>
+    {% if service_vendor %}Edit "{{ service_vendor.name }}"{% else %}Add Outsourced Service{% endif %}
+  </h1>
+</div>
+
+<div class="sv-form-card">
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="mb-3">
+      <label class="form-label">Name</label>
+      <input type="text" name="name" class="form-control {% if errors.name %}is-invalid{% endif %}"
+             value="{{ service_vendor.name|default:posted.name }}" required>
+      {% if errors.name %}<div class="invalid-feedback">{{ errors.name }}</div>{% endif %}
+    </div>
+
+    <div class="sv-form-row mb-3">
+      <div>
+        <label class="form-label">Phone</label>
+        <input type="text" name="phone" class="form-control {% if errors.phone %}is-invalid{% endif %}"
+               value="{{ service_vendor.phone|default:posted.phone }}" required>
+        {% if errors.phone %}<div class="invalid-feedback">{{ errors.phone }}</div>{% endif %}
+      </div>
+      <div>
+        <label class="form-label">Email</label>
+        <input type="email" name="email" class="form-control"
+               value="{{ service_vendor.email|default:posted.email }}">
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Address</label>
+      <textarea name="address" class="form-control" rows="2">{{ service_vendor.address|default:posted.address }}</textarea>
+    </div>
+
+    <div class="sv-form-row mb-3">
+      <div>
+        <label class="form-label">Type of Service</label>
+        <select name="service_type" class="form-select {% if errors.service_type %}is-invalid{% endif %}" required>
+          <option value="">Select type…</option>
+          {% for value, label in service_type_choices %}
+            <option value="{{ value }}" {% if service_vendor.service_type == value or posted.service_type == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        {% if errors.service_type %}<div class="invalid-feedback">{{ errors.service_type }}</div>{% endif %}
+      </div>
+      <div>
+        <label class="form-label">Pricing Basis</label>
+        <select name="pricing_type" class="form-select {% if errors.pricing_type %}is-invalid{% endif %}" required>
+          {% for value, label in pricing_type_choices %}
+            <option value="{{ value }}" {% if service_vendor.pricing_type == value or posted.pricing_type == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        {% if errors.pricing_type %}<div class="invalid-feedback">{{ errors.pricing_type }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">Pricing (₹)</label>
+      <input type="number" step="0.01" min="0" name="price" class="form-control {% if errors.price %}is-invalid{% endif %}"
+             value="{{ service_vendor.price|default:posted.price }}" required>
+      {% if errors.price %}<div class="invalid-feedback">{{ errors.price }}</div>{% endif %}
+      <div class="form-text">Enter the rate per plate or per venue, based on the pricing basis selected above.</div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save</button>
+      <a href="{% url 'vendor_service_management' %}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

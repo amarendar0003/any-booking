@@ -104,6 +104,10 @@
     }
     .vendor-sidebar .nav-link.active i { color: var(--v-orange); }
     .vendor-sidebar nav { padding-top: .5rem; }
+    .vendor-sidebar .nav-section-label {
+      padding: 1rem 1.3rem .35rem; font-size: .66rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .08em; color: #6b7280;
+    }
 
     /* ---------- Main / topbar ---------- */
     .vendor-main { flex: 1; min-width: 0; margin-left: 240px; padding: 1.4rem 2rem 2rem; }
@@ -368,6 +372,18 @@
       </a>
       <a href="{% url 'vendor_profile' %}" class="nav-link {% block nav_profile %}{% endblock %}">
         <i class="bi bi-person-circle"></i> Profile
+      </a>
+
+      <div class="nav-section-label">Manage</div>
+
+      <a href="{% url 'vendor_service_management' %}" class="nav-link {% block nav_service_management %}{% endblock %}">
+        <i class="bi bi-diagram-3"></i> Service Management
+      </a>
+      <a href="{% url 'vendor_staff' %}" class="nav-link {% block nav_staff %}{% endblock %}">
+        <i class="bi bi-people"></i> Staff
+      </a>
+      <a href="{% url 'vendor_gallery' %}" class="nav-link {% block nav_gallery %}{% endblock %}">
+        <i class="bi bi-images"></i> Gallery
       </a>
     </nav>
   </aside>

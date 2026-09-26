@@ -1,0 +1,80 @@
+
+{% extends "vendors/base.html" %}
+
+{% block title %}{{ sv.name }} — Availability{% endblock %}
+{% block nav_service_management %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+  .sv-detail-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; margin-bottom: 1.2rem; }
+  .sv-detail-head .sub { color: #6b7280; font-size: .88rem; }
+  .cal-day form { margin: 0; height: 100%; width: 100%; }
+  .cal-day button {
+    all: unset; display: flex; align-items: center; justify-content: center;
+    height: 100%; width: 100%; cursor: pointer; font: inherit; color: inherit;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-diagram-3 me-2 text-primary"></i>{{ sv.name }}</h1>
+  <a href="{% url 'vendor_service_management' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+</div>
+
+<div class="sv-detail-head">
+  <div class="sub">
+    <i class="bi bi-tag me-1"></i>{{ sv.get_service_type_display }} &middot;
+    ₹{{ sv.price }} {{ sv.pricing_label }} &middot;
+    <i class="bi bi-star-fill text-warning"></i> {{ sv.rating }}/5 &middot;
+    Opted {{ sv.times_opted }}x
+  </div>
+  <a href="{% url 'vendor_edit_service_vendor' sv.pk %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-pencil me-1"></i>Edit Details
+  </a>
+</div>
+
+<div class="cal-card">
+  <div class="cal-head">
+    <h2>{{ calendar_month_label }}</h2>
+    <div class="cal-nav">
+      <a href="?year={{ calendar_prev.year }}&month={{ calendar_prev.month }}"><i class="bi bi-chevron-left"></i></a>
+      <a href="?year={{ calendar_next.year }}&month={{ calendar_next.month }}"><i class="bi bi-chevron-right"></i></a>
+    </div>
+  </div>
+
+  <div class="cal-body">
+    <div class="cal-left">
+      <div class="cal-grid">
+        {% for label in calendar_weekday_labels %}
+          <div class="cal-weekday">{{ label }}</div>
+        {% endfor %}
+        {% for week in calendar_weeks %}
+          {% for day in week %}
+            {% if day %}
+              <div class="cal-day {{ day.status }} {% if day.is_today %}today{% endif %}"
+                   title="{% if day.status == 'booked' %}Unavailable — click to mark available{% else %}Available — click to mark unavailable{% endif %}">
+                <form method="post" action="{% url 'vendor_toggle_service_vendor_date' sv.pk %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="date" value="{{ day.date }}">
+                  <input type="hidden" name="next" value="{% url 'vendor_service_vendor_detail' sv.pk %}?year={{ calendar_current.year }}&month={{ calendar_current.month }}">
+                  <button type="submit">{{ day.day }}</button>
+                </form>
+              </div>
+            {% else %}
+              <div class="cal-day empty"></div>
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+      </div>
+
+      <div class="cal-legend">
+        <span><span class="dot dot-available"></span>Available</span>
+        <span><span class="dot dot-booked"></span>Unavailable</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
