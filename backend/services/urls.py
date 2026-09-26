@@ -8,4 +8,5 @@ urlpatterns = [
     path('service/<slug:slug>/', views.service_detail, name='service_detail'),
     path('ajax/location/', views.location_ajax, name='location_ajax'),
     path('ajax/set-location/', views.set_location, name='set_location'),
+    path('ajax/chat/', views.chatbot_chat, name='chatbot_chat'),
 ]

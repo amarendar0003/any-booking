@@ -473,3 +473,34 @@ def set_location(request):
     response.set_cookie('ab_country', country_id, max_age=max_age, samesite='Lax')
     response.set_cookie('ab_state', state_id, max_age=max_age, samesite='Lax')
     return response
+
+
+from django.views.decorators.csrf import csrf_exempt
+
+
+@csrf_exempt
+def chatbot_chat(request):
+    """
+    Receives chat messages from the frontend widget and delegates
+    to the GroqChatbotModel in services.chatbot.
+    """
+    import json
+    from django.http import JsonResponse
+    from .chatbot import ask_assistant
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8')) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    message = data.get('message', '').strip()
+    history = data.get('history', [])
+
+    if not message:
+        return JsonResponse({'error': 'Message cannot be empty'}, status=400)
+
+    result = ask_assistant(message=message, history=history)
+    return JsonResponse(result)

@@ -216,6 +216,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 RAZORPAY_KEY_ID = env('RAZORPAY_KEY_ID', default='')
 RAZORPAY_KEY_SECRET = env('RAZORPAY_KEY_SECRET', default='')
 
+GROQ_API_KEY = env('GROQ_API_KEY', default='')
+GROQ_MODEL = env('GROQ_MODEL', default='openai/gpt-oss-20b')
+
 LOGIN_URL = '/admin/login/'
 
 # ── Email ──────────────────────────────────────────────────────────────────────
@@ -302,3 +305,7 @@ LOGGING = {
         },
     },
 }
+
+# ── Groq Chatbot Settings ──────────────────────────────────────────────────────
+GROQ_API_KEY = env('GROQ_API_KEY', default='')
+GROQ_MODEL = env('GROQ_MODEL', default='llama-3.3-70b-versatile')
