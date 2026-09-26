@@ -124,8 +124,8 @@
         {% endfor %}
       </div>
 
-      {# Venue filter sidebar: Venue Type / Capacity / Amenities / Popular Cities (banquet hall only) #}
-      {% if category and category.slug == 'banquet_hall' %}
+      {# Venue filter sidebar (Venue Type / Capacity / Amenities / Other Services / Popular Cities): shown on Banquet Hall and on "All Services". #}
+      {% if not category or category.slug == 'banquet_hall' %}
         {% include 'services/_venue_filter_sidebar.html' %}
       {% endif %}
 

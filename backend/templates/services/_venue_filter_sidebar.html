@@ -1,9 +1,10 @@
-{# Included from services/list.html only when category.slug == 'banquet_hall' #}
+{# Included from services/list.html on the Banquet Hall category page and on "All Services" (no category selected). #}
 <div class="sidebar-card venue-filter-card">
 
   <div class="venue-filter-header">
     <h6 class="mb-0"><i class="bi bi-sliders"></i> Filter Venues</h6>
-    <a href="{% url 'service_list_by_category' category.slug %}" class="venue-filter-reset">
+    <a href="{% if category %}{% url 'service_list_by_category' category.slug %}{% else %}{% url 'service_list' %}{% endif %}"
+       class="venue-filter-reset">
       <i class="bi bi-arrow-counterclockwise"></i> Reset All
     </a>
   </div>
@@ -55,6 +56,43 @@
       </div>
     </details>
 
+    <details class="venue-filter-section" {% if other_services_ctx.inhouse.has_checked or other_services_ctx.outside.has_checked %}open{% endif %}>
+      <summary>Other Services</summary>
+      <div class="other-services-groups">
+
+        <details class="other-services-subsection" {% if other_services_ctx.inhouse.has_checked %}open{% endif %}>
+          <summary>{{ other_services_ctx.inhouse.label|default:"In-house" }}</summary>
+          <div class="venue-filter-options">
+            {% for item in other_services_ctx.inhouse.items %}
+            <label class="filter-checkbox-row">
+              <span>
+                <input type="checkbox" name="other_services" value="{{ item.slug }}" {% if item.checked %}checked{% endif %}>
+                {{ item.label }}
+              </span>
+              <span class="facet-count">{{ item.count }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </details>
+
+        <details class="other-services-subsection" {% if other_services_ctx.outside.has_checked %}open{% endif %}>
+          <summary>{{ other_services_ctx.outside.label|default:"Outside" }}</summary>
+          <div class="venue-filter-options">
+            {% for item in other_services_ctx.outside.items %}
+            <label class="filter-checkbox-row">
+              <span>
+                <input type="checkbox" name="other_services" value="{{ item.slug }}" {% if item.checked %}checked{% endif %}>
+                {{ item.label }}
+              </span>
+              <span class="facet-count">{{ item.count }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </details>
+
+      </div>
+    </details>
+
   </form>
 
   {% if popular_cities %}
@@ -62,7 +100,7 @@
     <h6 class="mb-2" style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary)">Popular Cities</h6>
     <div class="city-chip-grid">
       {% for c in popular_cities %}
-      <a href="{% url 'service_list_by_category' category.slug %}?city={{ c.id }}"
+      <a href="{% if category %}{% url 'service_list_by_category' category.slug %}{% else %}{% url 'service_list' %}{% endif %}?city={{ c.id }}"
          class="city-chip {% if selected_city == c.id|stringformat:'s' %}active{% endif %}">{{ c.name }}</a>
       {% endfor %}
     </div>

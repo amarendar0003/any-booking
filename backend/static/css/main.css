@@ -1594,6 +1594,53 @@ body.modal-open {
   color: #fff;
 }
 
+.other-services-groups {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.other-services-subsection {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #fbfbfd;
+}
+
+.other-services-subsection summary {
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.other-services-subsection summary::-webkit-details-marker {
+  display: none;
+}
+
+.other-services-subsection summary::after {
+  content: '\25BE';
+  font-size: .7rem;
+  transition: transform .15s;
+}
+
+.other-services-subsection[open] summary::after {
+  transform: rotate(180deg);
+}
+
+.other-services-subsection[open] summary {
+  margin-bottom: 8px;
+}
+
+.other-services-subsection .venue-filter-options {
+  margin-top: 0;
+}
+
 .city-chip-grid {
   display: flex;
   flex-wrap: wrap;

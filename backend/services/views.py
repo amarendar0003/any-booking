@@ -10,8 +10,7 @@ AMENITY_ATTRS = [
     ('ac-hall', 'AC / Air Conditioned', 'bi-snow2'),
     ('parking-available', 'Parking', 'bi-p-square'),
     ('power-backup', 'Power Backup', 'bi-lightning-charge'),
-    ('in-house-catering', 'In-house Catering', 'bi-egg-fried'),
-    ('outdoor-lawn', 'Outdoor Lawn', 'bi-flower1'),
+    ('rooms', 'Rooms', 'bi-door-open'),
 ]
 
 # Preset capacity ranges for the "Capacity (Guests)" button group.
@@ -19,14 +18,48 @@ AMENITY_ATTRS = [
 CAPACITY_FILTERS = {
     'lt100': Q(attribute_values__value_number__lt=100),
     '100-300': Q(attribute_values__value_number__gte=100, attribute_values__value_number__lte=300),
-    '300-800': Q(attribute_values__value_number__gte=300, attribute_values__value_number__lte=800),
+    '300-500': Q(attribute_values__value_number__gte=300, attribute_values__value_number__lte=500),
+    '500-800': Q(attribute_values__value_number__gte=500, attribute_values__value_number__lte=800),
+    'gt800': Q(attribute_values__value_number__gt=800),
 }
 CAPACITY_LABELS = [
     ('any', 'Any'),
     ('lt100', '<100'),
     ('100-300', '100 - 300'),
-    ('300-800', '300 - 800'),
+    ('300-500', '300 - 500'),
+    ('500-800', '500 - 800'),
+    ('gt800', '>800'),
 ]
+
+# "Other Services" sidebar section: not a checkbox itself — picking "In-house"
+# or "Outside" reveals that group's own checkboxes. Both groups reuse the same
+# multi-select GET param (`other_services`) so a single AND-filter loop, like
+# the one used for AMENITY_ATTRS, covers both. 'inhouse-catering' is the same
+# attribute slug previously listed directly under Amenities.
+OTHER_SERVICES_GROUPS = {
+    'inhouse': {
+        'label': 'In-house',
+        'attrs': [
+            ('inhouse-catering', 'In-house Catering'),
+            ('inhouse-decoration', 'In-house Decoration'),
+            ('inhouse-event-management', 'In-house Event Management'),
+            ('inhouse-priests', 'In-house Priests'),
+            ('inhouse-music', 'In-house Music'),
+            ('inhouse-dance-floor', 'In-house Dance Floor'),
+        ],
+    },
+    'outside': {
+        'label': 'Outside',
+        'attrs': [
+            ('outside-catering', 'Outside Catering'),
+            ('outside-decoration', 'Outside Decoration'),
+            ('outside-event-management', 'Outside Event Management'),
+            ('outside-priests', 'Outside Priests'),
+            ('outside-music', 'Outside Music'),
+            ('outside-dancefloor', 'Outside Dancefloor'),
+        ],
+    },
+}
 
 
 def _category_loc_filter(country_id, state_id):
@@ -146,26 +179,38 @@ def service_list(request, category_slug=None):
             attribute_values__value_boolean=True
         )
 
-    # ── Venue filter sidebar (Banquet Hall only): venue type, amenities, capacity ──
-    # Snapshot the queryset *before* these three filters so facet counts (how many
-    # results each checkbox would give) reflect location/search/hall_type but not
-    # the sidebar selections themselves — otherwise checking a box could make its
-    # own count (and its siblings') collapse to zero.
+    # ── Venue filter sidebar (Banquet Hall + "All" categories): venue type,
+    # amenities, other services, capacity. Snapshot the queryset *before*
+    # these filters so facet counts (how many results each checkbox would
+    # give) reflect location/search/hall_type but not the sidebar selections
+    # themselves — otherwise checking a box could make its own count (and its
+    # siblings') collapse to zero.
     facet_base = services
 
     venue_type_options = []
     amenities_ctx = []
+    other_services_ctx = {}
     capacity_counts = {}
     selected_venue_types = []
     selected_amenities = []
+    selected_other_services = []
     capacity = ''
     popular_cities = []
 
-    if category and category.slug == 'banquet_hall':
+    # Shown on the Banquet Hall category page and on "All Services" (no
+    # category selected). Hidden for every other category.
+    show_venue_filter = category is None or category.slug == 'banquet_hall'
+
+    if show_venue_filter:
         popular_cities = City.objects.filter(is_featured=True, is_active=True).order_by('name')
 
+        # The venue-filter attribute definitions (venue-type, amenities, other
+        # services) always live under the Banquet Hall category, even when
+        # this sidebar is being shown on the "All Services" page.
+        banquet_category = category or Category.objects.filter(slug='banquet_hall', is_active=True).first()
+
         # -- Venue Type (multi-select checkboxes, OR'd together) --
-        venue_type_attr = AttributeDefinition.objects.filter(category=category, slug='venue-type').first()
+        venue_type_attr = AttributeDefinition.objects.filter(category=banquet_category, slug='venue-type').first()
         raw_choices = venue_type_attr.get_choices_list() if venue_type_attr else []
         selected_venue_types = request.GET.getlist('venue_type')
         venue_type_options = [
@@ -205,6 +250,39 @@ def service_list(request, category_slug=None):
             for slug, label, icon in AMENITY_ATTRS
         ]
         for slug in selected_amenities:
+            services = services.filter(
+                attribute_values__attribute__slug=slug,
+                attribute_values__value_boolean=True,
+            )
+
+        # -- Other Services (multi-select checkboxes, grouped under In-house / Outside) --
+        all_other_services_slugs = [
+            slug for group in OTHER_SERVICES_GROUPS.values() for slug, _ in group['attrs']
+        ]
+        selected_other_services = [
+            slug for slug in request.GET.getlist('other_services')
+            if slug in all_other_services_slugs
+        ]
+        other_services_ctx = {
+            group_key: {
+                'label': group['label'],
+                'items': [
+                    {
+                        'slug': slug,
+                        'label': label,
+                        'checked': slug in selected_other_services,
+                        'count': facet_base.filter(
+                            attribute_values__attribute__slug=slug,
+                            attribute_values__value_boolean=True,
+                        ).distinct().count(),
+                    }
+                    for slug, label in group['attrs']
+                ],
+                'has_checked': any(slug in selected_other_services for slug, _ in group['attrs']),
+            }
+            for group_key, group in OTHER_SERVICES_GROUPS.items()
+        }
+        for slug in selected_other_services:
             services = services.filter(
                 attribute_values__attribute__slug=slug,
                 attribute_values__value_boolean=True,
@@ -274,6 +352,8 @@ def service_list(request, category_slug=None):
         'selected_venue_types': selected_venue_types,
         'amenities_ctx': amenities_ctx,
         'selected_amenities': selected_amenities,
+        'other_services_ctx': other_services_ctx,
+        'selected_other_services': selected_other_services,
         'capacity': capacity,
         'capacity_display': capacity or 'any',
         'capacity_counts': capacity_counts,
