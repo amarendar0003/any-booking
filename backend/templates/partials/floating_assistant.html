@@ -1,11 +1,13 @@
 {% load static %}
 <!-- ── Floating Actions & Assistant Chatbot ── -->
 <div class="floating-actions-dock" id="floatingActionsDock">
-  <!-- Book Now Button (Redirects to Services Page) -->
+  <!-- Book Now Button (Hidden on Services Page, visible on all other pages) -->
+  {% if request.resolver_match.url_name != 'service_list' and request.resolver_match.url_name != 'service_list_by_category' and not '/services' in request.path %}
   <a href="{% url 'service_list' %}" class="floating-pill-btn floating-book-btn" id="floatingBookBtn" title="Explore and Book Services">
     <i class="bi bi-calendar2-check-fill"></i>
     <span>Book Now</span>
   </a>
+  {% endif %}
 
   <!-- Ask Assistant Button (Toggles Chatbot Interface) -->
   <button type="button" class="floating-pill-btn floating-assistant-btn" id="floatingAssistantBtn" aria-label="Ask Assistant" title="Chat with Assistant">
@@ -464,6 +466,12 @@
   const dock = document.getElementById('floatingActionsDock');
 
   if (!assistantBtn || !chatWindow) return;
+
+  // On Services page, hide Book Now button so only Ask Assistant is visible
+  if (window.location.pathname.startsWith('/services')) {
+    const bookBtn = document.getElementById('floatingBookBtn');
+    if (bookBtn) bookBtn.remove();
+  }
 
   /* ── Scroll Effect Handler ── */
   let scrollTimer = null;
